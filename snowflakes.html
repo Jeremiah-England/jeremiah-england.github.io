@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snowflake Generator - JavaScript</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 20px;
+            background-color: rgba(20, 20, 20, 0.8);
+            flex-shrink: 0;
+        }
+        h1 {
+            margin: 0;
+            flex: 1;
+            text-align: center;
+        }
+        #info {
+            color: #aaa;
+            font-size: 16px;
+            margin-right: 20px;
+            min-width: 150px;
+        }
+        #controls {
+            display: flex;
+            gap: 10px;
+        }
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        button {
+            padding: 6px 12px;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        /* Info Modal Styles */
+        #info-button {
+            margin-left: 10px;
+            font-size: 16px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #555;
+        }
+        #modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        #info-modal {
+            background-color: #222;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            color: #ddd;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        #info-modal h2 {
+            margin-top: 0;
+            color: #fff;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        #info-modal section {
+            margin-bottom: 20px;
+        }
+        #info-modal h3 {
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+        #modal-close {
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        #modal-close:hover {
+            background-color: #555;
+        }
+        /* Updated Fullscreen exit control */
+        #fullscreen-exit {
+            display: none; /* Hide by default */
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 2px solid white;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        
+        #fullscreen-exit:hover {
+            background-color: rgba(50, 50, 50, 0.9);
+        }
+
+        /* Add a pulsing animation to make it more noticeable */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.5); }
+            50% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.8); }
+            100% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.5); }
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div id="info"></div>
+        <h1>Snowflake Generator</h1>
+        <div id="controls">
+            <button id="pause-btn">Pause</button>
+            <button id="zoom-in-btn">Zoom In</button>
+            <button id="zoom-out-btn">Zoom Out</button>
+            <button id="fullscreen-btn">Full Screen</button>
+            <button id="info-button">ⓘ</button>
+        </div>
+    </div>
+    <div id="canvas-container">
+        <canvas id="game-canvas" width="1600" height="900"></canvas>
+        <button id="fullscreen-exit">Exit Full Screen</button>
+    </div>
+    
+    <!-- Information Modal -->
+    <div id="modal-overlay">
+        <div id="info-modal">
+            <h2>About Snowflake Generator</h2>
+            <section>
+                <h3>Controls</h3>
+                <ul>
+                    <li><strong>Drag mouse:</strong> Pan camera</li>
+                    <li><strong>Mouse wheel:</strong> Zoom in/out</li>
+                    <li><strong>Arrow keys / WASD:</strong> Pan camera</li>
+                    <li><strong>Space:</strong> Pause/Resume</li>
+                    <li><strong>+/- keys:</strong> Zoom in/out</li>
+                    <li><strong>F key:</strong> Toggle full screen</li>
+                </ul>
+            </section>
+            <section>
+                <h3>About This Application</h3>
+                <p>This Snowflake Generator uses JavaScript and HTML5 Canvas to create procedurally generated snowflakes using L-systems. It allows interactive panning and zooming, with realistic physics for the snowflakes.</p>
+            </section>
+            <section>
+                <h3>Credits</h3>
+                <p>Converted to JavaScript based on the original PyGame implementation.</p>
+            </section>
+            <button id="modal-close">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const canvas = document.getElementById("game-canvas");
+        const ctx = canvas.getContext("2d");
+        const infoDiv = document.getElementById("info");
+        const pauseBtn = document.getElementById("pause-btn");
+        const zoomInBtn = document.getElementById("zoom-in-btn");
+        const zoomOutBtn = document.getElementById("zoom-out-btn");
+        const fullscreenBtn = document.getElementById("fullscreen-btn");
+        const infoButton = document.getElementById("info-button");
+        const modalOverlay = document.getElementById("modal-overlay");
+        const modalClose = document.getElementById("modal-close");
+        const fullscreenExit = document.getElementById("fullscreen-exit");
+
+        // Constants
+        let SCREEN_WIDTH = 1600;
+        let SCREEN_HEIGHT = 900;
+        const NUM_SNOWFLAKES = 150;
+        const NUM_DESIGNS = 25;
+        const MIN_SCALE = 0.05;
+        const SHOOTING_STAR_CHANCE = 0.0005; // Chance per frame to spawn a shooting star
+        const COMET_CHANCE = 0.0001; // Much rarer than shooting stars
+        const MOON_CHANCE = 0.00001; // Increased from 0.00005 to appear sooner
+        const ALIEN_SHIP_CHANCE = 0.00005; // Increased from 0.0001 to appear sooner
+
+        // Variables
+        let paused = false;
+        let zoom = 1.0;
+        let cameraX = 0;
+        let cameraY = 0;
+        let dragging = false;
+        let lastMousePos = null;
+        let keysPressed = new Set();
+        let snowflakeDesigns = [];
+        let snowflakes = [];
+        let shootingStars = [];
+        let comets = [];
+        let moons = [];
+        let alienShips = [];
+
+        // L-system rules
+        const axiom = "F";
+        const rules = {
+            "F": ["F[+F]F[-F]F", "F[+F]F", "F[-F]F", "F[+F][-F]"]
+        };
+
+        // Generate L-system string
+        function generateLSystem(iterations) {
+            let current = axiom;
+            for (let i = 0; i < iterations; i++) {
+                let next = "";
+                for (const char of current) {
+                    if (char in rules) {
+                        next += rules[char][Math.floor(Math.random() * rules[char].length)];
+                    } else {
+                        next += char;
+                    }
+                }
+                current = next;
+            }
+            return current;
+        }
+
+        // Draw L-system on canvas
+        function drawLSystem(ctx, string, length, angleStep, scaleFactor) {
+            let angle = 0;
+            let x = 0;
+            let y = 0;
+            let depth = 0;
+            const stack = [];
+
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+
+            for (const char of string) {
+                if (char === "F") {
+                    const currentLength = length * (scaleFactor ** depth);
+                    const newX = x + currentLength * Math.cos(angle * Math.PI / 180);
+                    const newY = y + currentLength * Math.sin(angle * Math.PI / 180);
+                    ctx.lineTo(newX, newY);
+                    x = newX;
+                    y = newY;
+                } else if (char === "+") {
+                    angle += angleStep;
+                } else if (char === "-") {
+                    angle -= angleStep;
+                } else if (char === "[") {
+                    stack.push({x, y, angle, depth});
+                    depth += 1;
+                } else if (char === "]") {
+                    ({x, y, angle, depth} = stack.pop());
+                    ctx.moveTo(x, y);
+                }
+            }
+            ctx.stroke();
+        }
+
+        // Snowflake class
+        class Snowflake {
+            constructor(designIndex, x, y, dx, dy, rotationSpeed, scale) {
+                this.designIndex = designIndex;
+                this.x = x;
+                this.y = y;
+                this.dx = dx;
+                this.dy = dy;
+                this.rotation = 0;
+                this.rotationSpeed = rotationSpeed;
+                this.scale = scale;
+            }
+
+            update() {
+                if (paused) return;
+
+                this.x += this.dx;
+                this.y += this.dy;
+                this.rotation += this.rotationSpeed;
+
+                // Calculate visible area
+                const visibleWidth = SCREEN_WIDTH / zoom;
+                const visibleHeight = SCREEN_HEIGHT / zoom;
+                const worldLeft = cameraX - visibleWidth / 2;
+                const worldTop = cameraY - visibleHeight / 2;
+                const worldRight = cameraX + visibleWidth / 2;
+                const worldBottom = cameraY + visibleHeight / 2;
+                const buffer = 100 / zoom;
+
+                // Respawn if off-screen
+                if (this.y > worldBottom + buffer || this.y < worldTop - buffer ||
+                    this.x > worldRight + buffer || this.x < worldLeft - buffer) {
+                    const edge = Math.floor(Math.random() * 4);
+                    if (edge === 0) { // Top
+                        this.y = worldTop - buffer;
+                        this.x = Math.random() * (worldRight - worldLeft) + worldLeft;
+                    } else if (edge === 1) { // Right
+                        this.x = worldRight + buffer;
+                        this.y = Math.random() * (worldBottom - worldTop) + worldTop;
+                    } else if (edge === 2) { // Bottom
+                        this.y = worldBottom + buffer;
+                        this.x = Math.random() * (worldRight - worldLeft) + worldLeft;
+                    } else { // Left
+                        this.x = worldLeft - buffer;
+                        this.y = Math.random() * (worldBottom - worldTop) + worldTop;
+                    }
+                }
+            }
+
+            draw(ctx) {
+                const design = snowflakeDesigns[this.designIndex];
+                const totalScale = this.scale * zoom;
+                if (totalScale <= MIN_SCALE) return;
+
+                // Calculate screen position
+                const screenX = (this.x - cameraX) * zoom + SCREEN_WIDTH / 2;
+                const screenY = (this.y - cameraY) * zoom + SCREEN_HEIGHT / 2;
+
+                if (screenX < -100 || screenX > SCREEN_WIDTH + 100 ||
+                    screenY < -100 || screenY > SCREEN_HEIGHT + 100) return;
+
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                ctx.rotate(this.rotation * Math.PI / 180);
+                ctx.scale(totalScale, totalScale);
+                ctx.strokeStyle = "white";
+
+                for (let i = 0; i < 6; i++) {
+                    ctx.save();
+                    ctx.rotate(i * 60 * Math.PI / 180);
+                    drawLSystem(ctx, design, 10, 60, 0.7);
+                    ctx.restore();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // Shooting Star class
+        class ShootingStar {
+            constructor() {
+                // Calculate visible area
+                const visibleWidth = SCREEN_WIDTH / zoom;
+                const visibleHeight = SCREEN_HEIGHT / zoom;
+                const worldLeft = cameraX - visibleWidth / 2;
+                const worldTop = cameraY - visibleHeight / 2;
+                const worldRight = cameraX + visibleWidth / 2;
+                const worldBottom = cameraY + visibleHeight / 2;
+                
+                // Start position (top half of screen)
+                this.x = Math.random() * visibleWidth + worldLeft;
+                this.y = Math.random() * (visibleHeight / 2) + worldTop;
+                
+                // Speed and direction (diagonal downward)
+                const angle = Math.PI / 4 + (Math.random() * Math.PI / 2); // 45-135 degrees
+                const speed = 5 + Math.random() * 10;
+                this.dx = Math.cos(angle) * speed;
+                this.dy = Math.sin(angle) * speed;
+                
+                // Visual properties
+                this.length = 50 + Math.random() * 100;
+                this.width = 2 + Math.random() * 2;
+                this.opacity = 1.0;
+                this.fadeSpeed = 0.01 + Math.random() * 0.02;
+                this.trail = [];
+                this.maxTrailLength = 10;
+                this.isDone = false;
+            }
+
+            update() {
+                if (paused) return;
+
+                // Store current position for trail
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > this.maxTrailLength) {
+                    this.trail.shift();
+                }
+
+                // Move
+                this.x += this.dx;
+                this.y += this.dy;
+                
+                // Fade out
+                this.opacity -= this.fadeSpeed;
+                
+                // Mark for removal when fully faded
+                if (this.opacity <= 0) {
+                    this.isDone = true;
+                }
+            }
+
+            draw(ctx) {
+                if (this.opacity <= 0) return;
+                
+                // Calculate screen position
+                const screenX = (this.x - cameraX) * zoom + SCREEN_WIDTH / 2;
+                const screenY = (this.y - cameraY) * zoom + SCREEN_HEIGHT / 2;
+                
+                // Draw main star
+                ctx.save();
+                ctx.strokeStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.lineWidth = this.width * zoom;
+                ctx.beginPath();
+                
+                // Calculate trail end point
+                const angle = Math.atan2(this.dy, this.dx);
+                const trailEndX = screenX - Math.cos(angle) * this.length * zoom;
+                const trailEndY = screenY - Math.sin(angle) * this.length * zoom;
+                
+                // Create gradient for the trail
+                const gradient = ctx.createLinearGradient(screenX, screenY, trailEndX, trailEndY);
+                gradient.addColorStop(0, `rgba(255, 255, 255, ${this.opacity})`);
+                gradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
+                ctx.strokeStyle = gradient;
+                
+                ctx.moveTo(screenX, screenY);
+                ctx.lineTo(trailEndX, trailEndY);
+                ctx.stroke();
+                
+                // Draw glow around the head
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, 3 * zoom, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        // Comet class
+        class Comet {
+            constructor() {
+                // Calculate visible area
+                const visibleWidth = SCREEN_WIDTH / zoom;
+                const visibleHeight = SCREEN_HEIGHT / zoom;
+                const worldLeft = cameraX - visibleWidth / 2;
+                const worldTop = cameraY - visibleHeight / 2;
+                const worldRight = cameraX + visibleWidth / 2;
+                const worldBottom = cameraY + visibleHeight / 2;
+                
+                // Determine starting edge (left or right)
+                const startFromLeft = Math.random() > 0.5;
+                
+                if (startFromLeft) {
+                    this.x = worldLeft - 100;
+                    this.dx = 0.5 + Math.random() * 1.0; // Slow movement
+                } else {
+                    this.x = worldRight + 100;
+                    this.dx = -(0.5 + Math.random() * 1.0); // Slow movement
+                }
+                
+                // Y position and very slight vertical movement
+                this.y = worldTop + Math.random() * visibleHeight * 0.7; // Upper 70% of screen
+                this.dy = (Math.random() - 0.5) * 0.2; // Almost horizontal
+                
+                // Visual properties
+                this.nucleusSize = 5 + Math.random() * 5;
+                this.tailLength = 200 + Math.random() * 300;
+                this.tailWidth = 8 + Math.random() * 6;
+                
+                // Color - slight blue/green tint options for variety
+                const colorType = Math.floor(Math.random() * 3);
+                if (colorType === 0) {
+                    // Blue-ish
+                    this.color = "rgba(200, 220, 255, 1.0)";
+                    this.tailColors = ["rgba(200, 220, 255, ", "rgba(100, 150, 255, "];
+                } else if (colorType === 1) {
+                    // Green-ish
+                    this.color = "rgba(200, 255, 220, 1.0)";
+                    this.tailColors = ["rgba(200, 255, 220, ", "rgba(100, 255, 150, "];
+                } else {
+                    // White
+                    this.color = "rgba(255, 255, 255, 1.0)";
+                    this.tailColors = ["rgba(255, 255, 255, ", "rgba(200, 200, 200, "];
+                }
+                
+                this.lifetime = 0;
+                this.maxLifetime = 1000 + Math.random() * 2000; // Longer lifetime
+                this.isDone = false;
+            }
+
+            update() {
+                if (paused) return;
+
+                // Move
+                this.x += this.dx;
+                this.y += this.dy;
+                
+                // Increment lifetime
+                this.lifetime++;
+                
+                // Check if comet should be removed
+                if (this.lifetime > this.maxLifetime) {
+                    this.isDone = true;
+                    return;
+                }
+                
+                // Also check if off-screen by a large margin
+                const visibleWidth = SCREEN_WIDTH / zoom;
+                const visibleHeight = SCREEN_HEIGHT / zoom;
+                const worldLeft = cameraX - visibleWidth / 2;
+                const worldTop = cameraY - visibleHeight / 2;
+                const worldRight = cameraX + visibleWidth / 2;
+                const worldBottom = cameraY + visibleHeight / 2;
+                const buffer = 500 / zoom;
+                
+                if (this.x > worldRight + buffer || this.x < worldLeft - buffer ||
+                    this.y > worldBottom + buffer || this.y < worldTop - buffer) {
+                    this.isDone = true;
+                }
+            }
+
+            draw(ctx) {
+                // Calculate screen position
+                const screenX = (this.x - cameraX) * zoom + SCREEN_WIDTH / 2;
+                const screenY = (this.y - cameraY) * zoom + SCREEN_HEIGHT / 2;
+                
+                // Check if visible (with buffer for tail)
+                const tailBuffer = this.tailLength * zoom;
+                if (screenX < -tailBuffer || screenX > SCREEN_WIDTH + tailBuffer ||
+                    screenY < -tailBuffer || screenY > SCREEN_HEIGHT + tailBuffer) {
+                    return;
+                }
+                
+                ctx.save();
+                
+                // Draw tail
+                const angle = Math.atan2(this.dy, this.dx);
+                const tailEndX = screenX - Math.cos(angle) * this.tailLength * zoom;
+                const tailEndY = screenY - Math.sin(angle) * this.tailLength * zoom;
+                
+                // Create gradient for the tail
+                const gradient = ctx.createLinearGradient(screenX, screenY, tailEndX, tailEndY);
+                gradient.addColorStop(0, this.tailColors[0] + "1.0)");
+                gradient.addColorStop(0.3, this.tailColors[1] + "0.8)");
+                gradient.addColorStop(1, this.tailColors[1] + "0)");
+                
+                // Draw main tail
+                ctx.beginPath();
+                ctx.moveTo(screenX, screenY);
+                ctx.lineTo(tailEndX, tailEndY);
+                ctx.lineWidth = this.tailWidth * zoom;
+                ctx.strokeStyle = gradient;
+                ctx.lineCap = "round";
+                ctx.stroke();
+                
+                // Draw nucleus with glow
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, this.nucleusSize * zoom, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                
+                // Add glow effect
+                const glowSize = this.nucleusSize * 2;
+                const glow = ctx.createRadialGradient(
+                    screenX, screenY, this.nucleusSize * zoom,
+                    screenX, screenY, glowSize * zoom
+                );
+                glow.addColorStop(0, this.color);
+                glow.addColorStop(1, "rgba(255, 255, 255, 0)");
+                
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, glowSize * zoom, 0, Math.PI * 2);
+                ctx.fillStyle = glow;
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        // Moon class
+        class Moon {
+            constructor() {
+                // Calculate visible area
+                const visibleWidth = SCREEN_WIDTH / zoom;
+                const visibleHeight = SCREEN_HEIGHT / zoom;
+                const worldLeft = cameraX - visibleWidth / 2;
+                const worldTop = cameraY - visibleHeight / 2;
+                const worldRight = cameraX + visibleWidth / 2;
+                const worldBottom = cameraY + visibleHeight / 2;
+                
+                // Start position (always from the left or right)
+                const startFromLeft = Math.random() > 0.5;
+                this.y = worldTop + visibleHeight * (0.2 + Math.random() * 0.4); // Upper half of screen
+                
+                if (startFromLeft) {
+                    this.x = worldLeft - 200;
+                    this.dx = 0.2 + Math.random() * 0.3; // Very slow movement
+                } else {
+                    this.x = worldRight + 200;
+                    this.dx = -(0.2 + Math.random() * 0.3); // Very slow movement
+                }
+                
+                // Moon properties - increase size for better visibility
+                this.radius = 80 + Math.random() * 60; // Larger radius for better visibility
+                this.phase = Math.random() * Math.PI * 2; // Random moon phase
+                this.rotationSpeed = (Math.random() * 0.02 - 0.01) * 0.05; // Very slight rotation
+                this.rotation = 0;
+                
+                // Generate craters
+                this.craters = [];
+                const numCraters = 5 + Math.floor(Math.random() * 10);
+                for (let i = 0; i < numCraters; i++) {
+                    // Polar coordinates for position within moon
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = (Math.random() * 0.7) * this.radius; // Not too close to edge
+                    this.craters.push({
+                        x: Math.cos(angle) * distance,
+                        y: Math.sin(angle) * distance,
+                        radius: 3 + Math.random() * 10,
+                        darkness: 0.1 + Math.random() * 0.2
+                    });
+                }
+                
+                // Moon color shades - slightly yellowish
+                this.baseColor = "rgba(255, 252, 220, 1.0)";
+                this.shadowColor = "rgba(50, 50, 40, 0.8)";
+                this.lifetime = 0;
+                this.maxLifetime = 2000 + Math.random() * 3000; // Very long lifetime
+                this.isDone = false;
+            }
+
+            update() {
+                if (paused) return;
+
+                // Slow movement
+                this.x += this.dx;
+                this.rotation += this.rotationSpeed;
+                this.lifetime++;
+                
+                // Check if moon should be removed
+                if (this.lifetime > this.maxLifetime) {
+                    this.isDone = true;
+                    return;
+                }
+                
+                // Also check if off-screen by a large margin
+                const visibleWidth = SCREEN_WIDTH / zoom;
+                const visibleHeight = SCREEN_HEIGHT / zoom;
+                const worldLeft = cameraX - visibleWidth / 2;
+                const worldTop = cameraY - visibleHeight / 2;
+                const worldRight = cameraX + visibleWidth / 2;
+                const worldBottom = cameraY + visibleHeight / 2;
+                const buffer = 500 / zoom;
+                
+                if ((this.dx > 0 && this.x > worldRight + buffer) || 
+                    (this.dx < 0 && this.x < worldLeft - buffer)) {
+                    this.isDone = true;
+                }
+            }
+
+            draw(ctx) {
+                // Calculate screen position
+                const screenX = (this.x - cameraX) * zoom + SCREEN_WIDTH / 2;
+                const screenY = (this.y - cameraY) * zoom + SCREEN_HEIGHT / 2;
+                const scaledRadius = this.radius * zoom;
+                
+                // Check if visible
+                if (screenX + scaledRadius < 0 || screenX - scaledRadius > SCREEN_WIDTH ||
+                    screenY + scaledRadius < 0 || screenY - scaledRadius > SCREEN_HEIGHT) {
+                    return;
+                }
+                
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                ctx.rotate(this.rotation);
+                
+                // Draw moon glow/halo
+                const gradient = ctx.createRadialGradient(
+                    0, 0, scaledRadius * 0.95,
+                    0, 0, scaledRadius * 1.4
+                );
+                gradient.addColorStop(0, "rgba(255, 252, 220, 0.3)");
+                gradient.addColorStop(1, "rgba(255, 252, 220, 0)");
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, scaledRadius * 1.4, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                // Draw moon base
+                ctx.beginPath();
+                ctx.arc(0, 0, scaledRadius, 0, Math.PI * 2);
+                ctx.fillStyle = this.baseColor;
+                ctx.fill();
+                
+                // Draw moon phase shadow using the phase angle
+                ctx.beginPath();
+                ctx.arc(0, 0, scaledRadius, 0, Math.PI * 2);
+                
+                // Create a shadow based on the moon phase
+                const phaseGradient = ctx.createLinearGradient(
+                    -scaledRadius, 0, scaledRadius, 0
+                );
+                
+                // Calculate shadow edge positions based on phase
+                const phaseShift = Math.cos(this.phase) * scaledRadius;
+                const shadowEdge1 = -scaledRadius + (scaledRadius * 2) * Math.max(0, (Math.cos(this.phase) + 1) / 2);
+                const shadowEdge2 = shadowEdge1 + scaledRadius * 0.2; // Soft shadow edge
+                
+                phaseGradient.addColorStop(0, "rgba(50, 50, 40, 0)");
+                if (shadowEdge1 > -scaledRadius) {
+                    phaseGradient.addColorStop(Math.max(0, (shadowEdge1 + scaledRadius) / (2 * scaledRadius)), "rgba(50, 50, 40, 0.7)");
+                    phaseGradient.addColorStop(Math.min(1, (shadowEdge2 + scaledRadius) / (2 * scaledRadius)), "rgba(50, 50, 40, 0.7)");
+                }
+                phaseGradient.addColorStop(1, "rgba(50, 50, 40, 0.7)");
+                
+                ctx.fillStyle = phaseGradient;
+                ctx.fill();
+                
+                // Draw craters
+                for (const crater of this.craters) {
+                    ctx.beginPath();
+                    ctx.arc(crater.x * zoom, crater.y * zoom, crater.radius * zoom, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(50, 50, 40, ${crater.darkness})`;
+                    ctx.fill();
+                    
+                    // Add highlight on one side of crater
+                    const highlightAngle = Math.PI / 4; // 45 degrees - light from above right
+                    const highlightX = crater.x * zoom + Math.cos(highlightAngle) * crater.radius * 0.5 * zoom;
+                    const highlightY = crater.y * zoom + Math.sin(highlightAngle) * crater.radius * 0.5 * zoom;
+                    
+                    const craterHighlight = ctx.createRadialGradient(
+                        highlightX, highlightY, 0,
+                        highlightX, highlightY, crater.radius * 0.7 * zoom
+                    );
+                    craterHighlight.addColorStop(0, "rgba(255, 255, 240, 0.15)");
+                    craterHighlight.addColorStop(1, "rgba(255, 255, 240, 0)");
+                    
+                    ctx.beginPath();
+                    ctx.arc(crater.x * zoom, crater.y * zoom, crater.radius * zoom, 0, Math.PI * 2);
+                    ctx.fillStyle = craterHighlight;
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        // Alien Spaceship class
+        class AlienSpaceship {
+            constructor() {
+                // Calculate visible area
+                const visibleWidth = SCREEN_WIDTH / zoom;
+                const visibleHeight = SCREEN_HEIGHT / zoom;
+                const worldLeft = cameraX - visibleWidth / 2;
+                const worldTop = cameraY - visibleHeight / 2;
+                const worldRight = cameraX + visibleWidth / 2;
+                const worldBottom = cameraY + visibleHeight / 2;
+                
+                // Start position (from any edge)
+                const edge = Math.floor(Math.random() * 4);
+                if (edge === 0) { // Top
+                    this.x = worldLeft + Math.random() * visibleWidth;
+                    this.y = worldTop - 50;
+                    this.targetY = worldTop + visibleHeight * 0.2 + Math.random() * visibleHeight * 0.4;
+                } else if (edge === 1) { // Right
+                    this.x = worldRight + 50;
+                    this.y = worldTop + Math.random() * visibleHeight;
+                    this.targetX = worldRight - Math.random() * visibleWidth * 0.7;
+                } else if (edge === 2) { // Bottom
+                    this.x = worldLeft + Math.random() * visibleWidth;
+                    this.y = worldBottom + 50;
+                    this.targetY = worldBottom - visibleHeight * 0.2 - Math.random() * visibleHeight * 0.4;
+                } else { // Left
+                    this.x = worldLeft - 50;
+                    this.y = worldTop + Math.random() * visibleHeight;
+                    this.targetX = worldLeft + Math.random() * visibleWidth * 0.7;
+                }
+                
+                // Initial target if not set above
+                if (this.targetX === undefined) this.targetX = this.x;
+                if (this.targetY === undefined) this.targetY = this.y;
+                
+                // Ship properties
+                this.width = 30 + Math.random() * 40;
+                this.height = this.width * 0.4;
+                this.speed = 0.3 + Math.random() * 0.7;
+                this.hoverAmplitude = 5 + Math.random() * 10;
+                this.hoverSpeed = 0.02 + Math.random() * 0.04;
+                this.hoverPhase = Math.random() * Math.PI * 2;
+                this.rotation = 0;
+                this.rotationSpeed = (Math.random() * 0.01 - 0.005);
+                this.zigzagAmplitude = 10 + Math.random() * 20;
+                this.zigzagSpeed = 0.05 + Math.random() * 0.1;
+                this.zigzagPhase = Math.random() * Math.PI * 2;
+                
+                // Movement phases:
+                // 0 = approaching target, 1 = hovering at target, 2 = leaving
+                this.movementPhase = 0;
+                this.hoverTime = 0;
+                this.hoverDuration = 200 + Math.random() * 400;
+                
+                // Lights
+                this.numLights = 4 + Math.floor(Math.random() * 5);
+                this.lights = [];
+                this.lightColors = [
+                    "rgba(255, 50, 50, ", // Red
+                    "rgba(50, 255, 50, ", // Green
+                    "rgba(50, 50, 255, ", // Blue
+                    "rgba(255, 255, 50, ", // Yellow
+                    "rgba(255, 50, 255, ", // Purple
+                    "rgba(50, 255, 255, "  // Cyan
+                ];
+                
+                for (let i = 0; i < this.numLights; i++) {
+                    this.lights.push({
+                        position: i / this.numLights,
+                        color: this.lightColors[Math.floor(Math.random() * this.lightColors.length)],
+                        phase: Math.random() * Math.PI * 2,
+                        speed: 0.05 + Math.random() * 0.1
+                    });
+                }
+                
+                // Beam properties
+                this.hasBeam = Math.random() > 0.5;
+                this.beamWidth = this.width * 0.3;
+                this.beamMaxLength = 200 + Math.random() * 200;
+                this.beamLength = 0;
+                this.beamGrowSpeed = 2 + Math.random() * 2;
+                this.beamActive = false;
+                this.beamPulsePhase = 0;
+                this.beamPulseSpeed = 0.1 + Math.random() * 0.2;
+                
+                this.lifetime = 0;
+                this.maxLifetime = 1000 + Math.random() * 2000;
+                this.isDone = false;
+            }
+
+            update() {
+                if (paused) return;
+
+                this.lifetime++;
+                
+                // Check if UFO should be removed
+                if (this.lifetime > this.maxLifetime) {
+                    this.isDone = true;
+                    return;
+                }
+                
+                // Movement logic based on phase
+                if (this.movementPhase === 0) {
+                    // Approach target
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 5) {
+                        this.movementPhase = 1; // Switch to hovering
+                    } else {
+                        const moveX = dx / distance * this.speed;
+                        const moveY = dy / distance * this.speed;
+                        this.x += moveX;
+                        this.y += moveY;
+                    }
+                } else if (this.movementPhase === 1) {
+                    // Hover at target
+                    this.hoverTime++;
+                    
+                    // Add some hovering motion
+                    this.x += Math.sin(this.hoverTime * this.hoverSpeed + this.hoverPhase) * 0.5;
+                    this.y += Math.cos(this.hoverTime * this.hoverSpeed * 1.3) * 0.3;
+                    
+                    // Activate beam during hovering
+                    if (this.hasBeam && this.hoverTime > this.hoverDuration * 0.3 && 
+                        this.hoverTime < this.hoverDuration * 0.7) {
+                        this.beamActive = true;
+                        if (this.beamLength < this.beamMaxLength) {
+                            this.beamLength = Math.min(this.beamMaxLength, this.beamLength + this.beamGrowSpeed);
+                        }
+                    } else {
+                        this.beamActive = false;
+                        if (this.beamLength > 0) {
+                            this.beamLength = Math.max(0, this.beamLength - this.beamGrowSpeed * 2);
+                        }
+                    }
+                    
+                    if (this.hoverTime > this.hoverDuration) {
+                        this.movementPhase = 2; // Switch to leaving
+                        
+                        // Choose exit direction (random edge)
+                        const visibleWidth = SCREEN_WIDTH / zoom;
+                        const visibleHeight = SCREEN_HEIGHT / zoom;
+                        const worldLeft = cameraX - visibleWidth / 2;
+                        const worldTop = cameraY - visibleHeight / 2;
+                        const worldRight = cameraX + visibleWidth / 2;
+                        const worldBottom = cameraY + visibleHeight / 2;
+                        
+                        const exitEdge = Math.floor(Math.random() * 4);
+                        if (exitEdge === 0) { // Top
+                            this.targetX = worldLeft + Math.random() * visibleWidth;
+                            this.targetY = worldTop - 200;
+                        } else if (exitEdge === 1) { // Right
+                            this.targetX = worldRight + 200;
+                            this.targetY = worldTop + Math.random() * visibleHeight;
+                        } else if (exitEdge === 2) { // Bottom
+                            this.targetX = worldLeft + Math.random() * visibleWidth;
+                            this.targetY = worldBottom + 200;
+                        } else { // Left
+                            this.targetX = worldLeft - 200;
+                            this.targetY = worldTop + Math.random() * visibleHeight;
+                        }
+                    }
+                } else {
+                    // Leave the scene
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // Accelerate as it leaves
+                    const speed = this.speed * 2;
+                    const moveX = dx / distance * speed;
+                    const moveY = dy / distance * speed;
+                    this.x += moveX;
+                    this.y += moveY;
+                    
+                    // Check if far off-screen
+                    const visibleWidth = SCREEN_WIDTH / zoom;
+                    const visibleHeight = SCREEN_HEIGHT / zoom;
+                    const worldLeft = cameraX - visibleWidth / 2;
+                    const worldTop = cameraY - visibleHeight / 2;
+                    const worldRight = cameraX + visibleWidth / 2;
+                    const worldBottom = cameraY + visibleHeight / 2;
+                    const buffer = 300 / zoom;
+                    
+                    if (this.x > worldRight + buffer || this.x < worldLeft - buffer ||
+                        this.y > worldBottom + buffer || this.y < worldTop - buffer) {
+                        this.isDone = true;
+                    }
+                }
+                
+                // Add zigzag motion regardless of phase
+                this.x += Math.sin(this.lifetime * this.zigzagSpeed + this.zigzagPhase) * this.zigzagAmplitude * 0.02;
+                
+                // Update rotation
+                this.rotation += this.rotationSpeed;
+                
+                // Update beam pulse
+                this.beamPulsePhase += this.beamPulseSpeed;
+                if (this.beamPulsePhase > Math.PI * 2) this.beamPulsePhase -= Math.PI * 2;
+            }
+
+            draw(ctx) {
+                // Calculate screen position
+                const screenX = (this.x - cameraX) * zoom + SCREEN_WIDTH / 2;
+                const screenY = (this.y - cameraY) * zoom + SCREEN_HEIGHT / 2;
+                const scaledWidth = this.width * zoom;
+                const scaledHeight = this.height * zoom;
+                
+                // Check if visible (with buffer)
+                const buffer = Math.max(scaledWidth, this.beamMaxLength * zoom);
+                if (screenX + buffer < 0 || screenX - buffer > SCREEN_WIDTH ||
+                    screenY + buffer < 0 || screenY - buffer > SCREEN_HEIGHT) {
+                    return;
+                }
+                
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                ctx.rotate(this.rotation);
+                
+                // Draw beam if active
+                if (this.beamActive && this.beamLength > 0) {
+                    const beamWidth = this.beamWidth * zoom;
+                    const beamLength = this.beamLength * zoom;
+                    
+                    // Pulse factor for beam opacity and width
+                    const pulseFactor = 0.7 + 0.3 * Math.sin(this.beamPulsePhase);
+                    
+                    // Draw beam gradient
+                    const beamGradient = ctx.createLinearGradient(0, 0, 0, beamLength);
+                    beamGradient.addColorStop(0, `rgba(180, 240, 255, ${0.9 * pulseFactor})`);
+                    beamGradient.addColorStop(0.7, `rgba(180, 240, 255, ${0.5 * pulseFactor})`);
+                    beamGradient.addColorStop(1, `rgba(180, 240, 255, 0)`);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(-beamWidth/2, 0);
+                    ctx.lineTo(beamWidth/2, 0);
+                    ctx.lineTo(beamWidth * 1.2, beamLength);
+                    ctx.lineTo(-beamWidth * 1.2, beamLength);
+                    ctx.closePath();
+                    ctx.fillStyle = beamGradient;
+                    ctx.fill();
+                    
+                    // Add inner glow to beam
+                    const innerBeamWidth = beamWidth * 0.5;
+                    const innerBeamGradient = ctx.createLinearGradient(0, 0, 0, beamLength);
+                    innerBeamGradient.addColorStop(0, `rgba(240, 255, 255, ${0.9 * pulseFactor})`);
+                    innerBeamGradient.addColorStop(0.6, `rgba(240, 255, 255, ${0.6 * pulseFactor})`);
+                    innerBeamGradient.addColorStop(1, `rgba(240, 255, 255, 0)`);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(-innerBeamWidth/2, 0);
+                    ctx.lineTo(innerBeamWidth/2, 0);
+                    ctx.lineTo(innerBeamWidth, beamLength * 0.9);
+                    ctx.lineTo(-innerBeamWidth, beamLength * 0.9);
+                    ctx.closePath();
+                    ctx.fillStyle = innerBeamGradient;
+                    ctx.fill();
+                }
+                
+                // Draw UFO body (saucer shape)
+                // Main body (ellipse)
+                ctx.beginPath();
+                ctx.ellipse(0, 0, scaledWidth/2, scaledHeight/2, 0, 0, Math.PI * 2);
+                const bodyGradient = ctx.createLinearGradient(0, -scaledHeight/2, 0, scaledHeight/2);
+                bodyGradient.addColorStop(0, "rgba(180, 180, 200, 1.0)");
+                bodyGradient.addColorStop(0.5, "rgba(140, 140, 160, 1.0)");
+                bodyGradient.addColorStop(1, "rgba(100, 100, 120, 1.0)");
+                ctx.fillStyle = bodyGradient;
+                ctx.fill();
+                
+                // Top dome
+                ctx.beginPath();
+                ctx.ellipse(0, -scaledHeight * 0.1, scaledWidth * 0.3, scaledHeight * 0.3, 0, Math.PI, 0, true);
+                const domeGradient = ctx.createRadialGradient(
+                    0, -scaledHeight * 0.2, 0,
+                    0, -scaledHeight * 0.2, scaledWidth * 0.3
+                );
+                domeGradient.addColorStop(0, "rgba(200, 230, 255, 0.9)");
+                domeGradient.addColorStop(1, "rgba(150, 180, 220, 0.7)");
+                ctx.fillStyle = domeGradient;
+                ctx.fill();
+                
+                // Bottom rim
+                ctx.beginPath();
+                ctx.ellipse(0, scaledHeight * 0.1, scaledWidth * 0.4, scaledHeight * 0.15, 0, 0, Math.PI * 2);
+                const rimGradient = ctx.createLinearGradient(0, 0, 0, scaledHeight * 0.2);
+                rimGradient.addColorStop(0, "rgba(120, 120, 140, 1.0)");
+                rimGradient.addColorStop(1, "rgba(80, 80, 100, 0.8)");
+                ctx.fillStyle = rimGradient;
+                ctx.fill();
+                
+                // Draw lights around rim
+                for (const light of this.lights) {
+                    const lightAngle = light.position * Math.PI * 2;
+                    const lightRadius = scaledWidth * 0.4;
+                    const lightX = Math.cos(lightAngle) * lightRadius;
+                    const lightY = Math.sin(lightAngle) * lightRadius * 0.3 + scaledHeight * 0.1;
+                    
+                    // Pulsating effect
+                    const pulse = 0.5 + 0.5 * Math.sin(this.lifetime * light.speed + light.phase);
+                    
+                    // Light glow
+                    const lightGlow = ctx.createRadialGradient(
+                        lightX, lightY, 0,
+                        lightX, lightY, scaledWidth * 0.08 * pulse
+                    );
+                    lightGlow.addColorStop(0, light.color + "1.0)");
+                    lightGlow.addColorStop(1, light.color + "0)");
+                    
+                    ctx.beginPath();
+                    ctx.arc(lightX, lightY, scaledWidth * 0.08 * pulse, 0, Math.PI * 2);
+                    ctx.fillStyle = lightGlow;
+                    ctx.fill();
+                    
+                    // Light center
+                    ctx.beginPath();
+                    ctx.arc(lightX, lightY, scaledWidth * 0.03 * pulse, 0, Math.PI * 2);
+                    ctx.fillStyle = light.color + "1.0)";
+                    ctx.fill();
+                }
+                
+                // Add subtle highlight on top
+                const highlightGradient = ctx.createRadialGradient(
+                    0, -scaledHeight * 0.3, 0,
+                    0, -scaledHeight * 0.3, scaledWidth * 0.5
+                );
+                highlightGradient.addColorStop(0, "rgba(255, 255, 255, 0.2)");
+                highlightGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+                
+                ctx.beginPath();
+                ctx.ellipse(0, -scaledHeight * 0.1, scaledWidth * 0.5, scaledHeight * 0.3, 0, 0, Math.PI);
+                ctx.fillStyle = highlightGradient;
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        // Generate snowflake designs
+        function generateSnowflakeDesigns() {
+            for (let i = 0; i < NUM_DESIGNS; i++) {
+                snowflakeDesigns.push(generateLSystem(2));
+            }
+        }
+
+        // Create snowflakes
+        function createSnowflakes() {
+            for (let i = 0; i < NUM_SNOWFLAKES; i++) {
+                const designIndex = Math.floor(Math.random() * NUM_DESIGNS);
+                const x = Math.random() * SCREEN_WIDTH * 2 - SCREEN_WIDTH;
+                const y = Math.random() * SCREEN_HEIGHT * 2 - SCREEN_HEIGHT;
+                const dx = Math.random() * 1 - 0.5;
+                const dy = Math.random() * 2 + 1;
+                const rotationSpeed = Math.random() * 2 - 1;
+                const scale = Math.random() * 1 + 0.5;
+                snowflakes.push(new Snowflake(designIndex, x, y, dx, dy, rotationSpeed, scale));
+            }
+        }
+
+        // Animation loop
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let fps = 0;
+
+        function animate(currentTime) {
+            // Calculate FPS
+            frameCount++;
+            const deltaTime = currentTime - lastTime;
+            if (deltaTime >= 1000) {
+                fps = frameCount / (deltaTime / 1000);
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+
+            // Update snowflakes
+            snowflakes.forEach(snowflake => snowflake.update());
+            
+            // Update shooting stars
+            shootingStars.forEach(star => star.update());
+            shootingStars = shootingStars.filter(star => !star.isDone);
+            
+            // Update comets
+            comets.forEach(comet => comet.update());
+            comets = comets.filter(comet => !comet.isDone);
+            
+            // Update moons with logging
+            if (moons.length > 0) {
+                console.log(`Moon count: ${moons.length}, Moon position: (${moons[0].x.toFixed(1)}, ${moons[0].y.toFixed(1)})`);
+            }
+            moons.forEach(moon => moon.update());
+            moons = moons.filter(moon => !moon.isDone);
+            
+            // Log when moons are removed
+            if (moons.length === 0) {
+                console.log("All moons removed");
+            }
+            
+            // Update alien ships
+            alienShips.forEach(ship => ship.update());
+            alienShips = alienShips.filter(ship => !ship.isDone);
+            
+            // Randomly create new celestial objects
+            if (!paused) {
+                if (Math.random() < SHOOTING_STAR_CHANCE) {
+                    shootingStars.push(new ShootingStar());
+                }
+                
+                if (Math.random() < COMET_CHANCE) {
+                    comets.push(new Comet());
+                }
+                
+                if (Math.random() < MOON_CHANCE) {
+                    // Only spawn a moon if there isn't one already
+                    if (moons.length === 0) {
+                        moons.push(new Moon());
+                        console.log("New moon created by random chance");
+                    }
+                }
+                
+                if (Math.random() < ALIEN_SHIP_CHANCE) {
+                    alienShips.push(new AlienSpaceship());
+                    console.log("New alien ship created");
+                }
+            }
+
+            // Handle keyboard panning
+            const panSpeed = 5 / zoom;
+            if (keysPressed.has("ArrowLeft") || keysPressed.has("KeyA")) cameraX -= panSpeed;
+            if (keysPressed.has("ArrowRight") || keysPressed.has("KeyD")) cameraX += panSpeed;
+            if (keysPressed.has("ArrowUp") || keysPressed.has("KeyW")) cameraY -= panSpeed;
+            if (keysPressed.has("ArrowDown") || keysPressed.has("KeyS")) cameraY += panSpeed;
+            if (keysPressed.has("Equal") || keysPressed.has("NumpadAdd")) zoom = Math.min(5.0, zoom * 1.1);
+            if (keysPressed.has("Minus") || keysPressed.has("NumpadSubtract")) zoom = Math.max(0.1, zoom / 1.1);
+
+            // Clear canvas
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+            // Draw snowflakes
+            snowflakes.forEach(snowflake => snowflake.draw(ctx));
+            
+            // Draw shooting stars
+            shootingStars.forEach(star => star.draw(ctx));
+            
+            // Draw comets
+            comets.forEach(comet => comet.draw(ctx));
+            
+            // Draw moons
+            moons.forEach(moon => {
+                console.log(`Drawing moon at screen position: (${(moon.x - cameraX) * zoom + SCREEN_WIDTH / 2}, ${(moon.y - cameraY) * zoom + SCREEN_HEIGHT / 2})`);
+                moon.draw(ctx);
+            });
+            
+            // Draw alien ships
+            alienShips.forEach(ship => ship.draw(ctx));
+
+            // Update info
+            infoDiv.textContent = `Zoom: ${zoom.toFixed(1)}x | FPS: ${Math.round(fps)} | Stars: ${shootingStars.length} | Comets: ${comets.length} | Moon: ${moons.length} | UFOs: ${alienShips.length}`;
+
+            requestAnimationFrame(animate);
+        }
+
+        // Event listeners
+        pauseBtn.addEventListener("click", () => {
+            paused = !paused;
+            pauseBtn.textContent = paused ? "Resume" : "Pause";
+        });
+
+        zoomInBtn.addEventListener("click", () => {
+            zoom = Math.min(5.0, zoom * 1.1);
+        });
+
+        zoomOutBtn.addEventListener("click", () => {
+            zoom = Math.max(0.1, zoom / 1.1);
+        });
+
+        fullscreenBtn.addEventListener("click", toggleFullScreen);
+
+        infoButton.addEventListener("click", () => {
+            modalOverlay.style.display = "flex";
+        });
+
+        modalClose.addEventListener("click", () => {
+            modalOverlay.style.display = "none";
+        });
+
+        modalOverlay.addEventListener("click", (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.style.display = "none";
+            }
+        });
+
+        // Mouse events for panning
+        canvas.addEventListener("mousedown", (e) => {
+            dragging = true;
+            lastMousePos = {x: e.clientX, y: e.clientY};
+        });
+
+        document.addEventListener("mouseup", () => {
+            dragging = false;
+        });
+
+        document.addEventListener("mousemove", (e) => {
+            if (dragging) {
+                const dx = e.clientX - lastMousePos.x;
+                const dy = e.clientY - lastMousePos.y;
+                cameraX -= dx / zoom;
+                cameraY -= dy / zoom;
+                lastMousePos = {x: e.clientX, y: e.clientY};
+            }
+        });
+
+        // Mouse wheel for zooming
+        canvas.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            const mouseX = e.offsetX;
+            const mouseY = e.offsetY;
+            const worldXBefore = (mouseX - SCREEN_WIDTH / 2) / zoom + cameraX;
+            const worldYBefore = (mouseY - SCREEN_HEIGHT / 2) / zoom + cameraY;
+            zoom = Math.max(0.1, Math.min(5.0, zoom * delta));
+            const worldXAfter = (mouseX - SCREEN_WIDTH / 2) / zoom + cameraX;
+            const worldYAfter = (mouseY - SCREEN_HEIGHT / 2) / zoom + cameraY;
+            cameraX += worldXBefore - worldXAfter;
+            cameraY += worldYBefore - worldYAfter;
+        });
+
+        // Keyboard events
+        document.addEventListener("keydown", (e) => {
+            keysPressed.add(e.code);
+            if (e.code === "Space") {
+                e.preventDefault();
+                paused = !paused;
+                pauseBtn.textContent = paused ? "Resume" : "Pause";
+            }
+            if (e.code === "KeyF") {
+                e.preventDefault();
+                toggleFullScreen();
+            }
+        });
+
+        document.addEventListener("keyup", (e) => {
+            keysPressed.delete(e.code);
+        });
+
+        // Simplified fullscreen toggle function
+        function toggleFullScreen() {
+            const container = document.getElementById('canvas-container');
+            
+            if (!document.fullscreenElement) {
+                // Enter fullscreen
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.mozRequestFullScreen) {
+                    container.mozRequestFullScreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                } else if (container.msRequestFullscreen) {
+                    container.msRequestFullscreen();
+                }
+            } else {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // Add cursor and button auto-hide functionality
+        let hideTimeout;
+
+        function resetHideTimeout() {
+            // Clear any existing timeout
+            clearTimeout(hideTimeout);
+            
+            // Show cursor and exit button if in fullscreen
+            if (document.fullscreenElement) {
+                document.body.style.cursor = 'auto';
+                document.getElementById('fullscreen-exit').style.display = 'block';
+                
+                // Set timeout to hide both after 3 seconds of inactivity
+                hideTimeout = setTimeout(function() {
+                    if (document.fullscreenElement) {
+                        document.body.style.cursor = 'none';
+                        document.getElementById('fullscreen-exit').style.display = 'none';
+                    }
+                }, 3000);
+            }
+        }
+
+        // Add mouse movement detection to show controls
+        document.addEventListener('mousemove', function(e) {
+            resetHideTimeout();
+            
+            // Extra detection for top of screen to ensure button visibility
+            if (document.fullscreenElement && e.clientY < 100) {
+                document.getElementById('fullscreen-exit').style.display = 'block';
+            }
+        });
+
+        // Update the fullscreen change handler to initialize auto-hide
+        function handleFullscreenChange() {
+            const exitButton = document.getElementById('fullscreen-exit');
+            
+            if (document.fullscreenElement) {
+                console.log('Entered fullscreen - showing exit button');
+                exitButton.style.display = 'block';
+                
+                // Start the auto-hide timeout
+                resetHideTimeout();
+            } else {
+                console.log('Exited fullscreen - hiding exit button');
+                exitButton.style.display = 'none';
+                document.body.style.cursor = 'auto';
+                clearTimeout(hideTimeout);
+            }
+            
+            // Always resize the canvas when fullscreen state changes
+            handleCanvasResize();
+        }
+
+        // Exit button click event
+        document.getElementById('fullscreen-exit').addEventListener('click', function() {
+            console.log('Exit button clicked');
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        });
+
+        // Restore the missing handleCanvasResize function
+        function handleCanvasResize() {
+            // Check if we're in fullscreen mode
+            const container = document.getElementById('canvas-container');
+            const isFullscreen = document.fullscreenElement === container ||
+                              document.mozFullScreenElement === container ||
+                              document.webkitFullscreenElement === container ||
+                              document.msFullscreenElement === container;
+            
+            if (isFullscreen) {
+                // In fullscreen, use the screen dimensions
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            } else {
+                // Otherwise, use container dimensions
+                const headerHeight = document.getElementById("header").offsetHeight;
+                const newWidth = window.innerWidth;
+                const newHeight = window.innerHeight - headerHeight;
+                canvas.width = newWidth;
+                canvas.height = newHeight;
+            }
+            
+            // Update screen constants
+            SCREEN_WIDTH = canvas.width;
+            SCREEN_HEIGHT = canvas.height;
+        }
+
+        // Add window resize event listener
+        window.addEventListener("resize", handleCanvasResize);
+
+        // Add missing fullscreen event listeners
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        // Initialize
+        generateSnowflakeDesigns();
+        createSnowflakes();
+        handleCanvasResize(); // Initial resize to match container
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
