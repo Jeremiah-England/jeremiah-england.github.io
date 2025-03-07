@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Simple WebRTC Chat</title>
+    <style>
+        video {
+            width: 300px;
+            height: 200px;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple WebRTC Chat</h1>
+    <div>
+        <video id="localVideo" autoplay muted></video>
+        <video id="remoteVideo" autoplay></video>
+    </div>
+    <div>
+        <p>Your Peer ID: <span id="peerId"></span></p>
+        <p>Share this link with your friend: <span id="shareLink"></span></p>
+    </div>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const peerIdSpan = document.getElementById('peerId');
+        const shareLinkSpan = document.getElementById('shareLink');
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const connectTo = urlParams.get('connectTo');
+
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                localVideo.srcObject = stream;
+
+                const peer = new Peer({
+                    host: '0.peerjs.com',
+                    port: 443,
+                    secure: true,
+                    config: {
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' }
+                        ]
+                    }
+                });
+
+                peer.on('open', id => {
+                    peerIdSpan.textContent = id;
+                    const shareUrl = `${window.location.origin}${window.location.pathname}?connectTo=${id}`;
+                    shareLinkSpan.textContent = shareUrl;
+
+                    if (connectTo && connectTo !== id) {
+                        const call = peer.call(connectTo, stream);
+                        call.on('stream', remoteStream => {
+                            remoteVideo.srcObject = remoteStream;
+                        });
+                    }
+                });
+
+                peer.on('call', call => {
+                    call.answer(stream);
+                    call.on('stream', remoteStream => {
+                        remoteVideo.srcObject = remoteStream;
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Error accessing media devices.', error);
+                alert('Please allow camera and microphone access to use the chat.');
+            });
+    </script>
+</body>
+</html>
