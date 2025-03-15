@@ -22,7 +22,7 @@
       font-size: 24px;
       cursor: pointer;
     }
-    #message {
+    #message, #playerInfo {
       text-align: center;
       font-size: 20px;
       margin: 10px;
@@ -40,6 +40,7 @@
     <div>
       <p>Your Peer ID: <span id="peerId"></span></p>
       <p>Share this link with your friend: <span id="shareLink"></span></p>
+      <p id="playerInfo"></p>
     </div>
     <div id="board">
       <div class="cell" data-index="0"></div>
@@ -60,7 +61,7 @@
     // Global variables
     let playerSymbol;
     let opponentSymbol;
-    let isMyTurn;
+    let isMyTurn = false;
     let isConnected = false;
     let conn;
     let gameState = ['', '', '', '', '', '', '', '', ''];
@@ -85,15 +86,16 @@
         conn = peer.connect(connectTo);
         conn.on('open', () => {
           isConnected = true;
-          resetGame();
+          playerSymbol = 'O';
+          opponentSymbol = 'X';
+          document.getElementById('playerInfo').textContent = "You are O";
+          startGame();
         });
         setupConnection(conn);
-        playerSymbol = 'O';
-        opponentSymbol = 'X';
-        document.getElementById('message').textContent = "Waiting for opponent to start...";
       } else {
         playerSymbol = 'X';
         opponentSymbol = 'O';
+        document.getElementById('playerInfo').textContent = "You are X";
         document.getElementById('message').textContent = "Waiting for opponent...";
       }
     });
@@ -101,50 +103,74 @@
     peer.on('connection', connection => {
       conn = connection;
       isConnected = true;
-      resetGame();
       setupConnection(conn);
+      startGame();
     });
 
-    // Set up connection to handle incoming moves
+    // Set up connection to handle incoming data
     function setupConnection(connection) {
       connection.on('data', data => {
-        const index = data;
-        gameState[index] = opponentSymbol;
-        updateUI();
-        const winner = checkWin();
-        if (winner) {
-          document.getElementById('message').textContent = `Player ${winner} wins!`;
+        if (data.type === 'move') {
+          const index = data.index;
+          gameState[index] = opponentSymbol;
+          updateUI();
+          const winner = checkWin();
+          if (winner) {
+            document.getElementById('message').textContent = `Player ${winner} wins!`;
+            gameActive = false;
+          } else if (gameState.every(cell => cell !== '')) {
+            document.getElementById('message').textContent = 'Draw!';
+            gameActive = false;
+          } else {
+            isMyTurn = true;
+            document.getElementById('message').textContent = `Player ${playerSymbol}'s turn`;
+          }
+        } else if (data.type === 'end') {
           gameActive = false;
-        } else if (gameState.every(cell => cell !== '')) {
-          document.getElementById('message').textContent = 'Draw!';
-          gameActive = false;
-        } else {
-          isMyTurn = true;
-          document.getElementById('message').textContent = `Player ${playerSymbol}'s turn`;
+          document.getElementById('message').textContent = data.message;
+          updateUI();
+        } else if (data.type === 'reset') {
+          startGame(); // Use startGame for consistent reset behavior
         }
       });
+    }
+
+    // Start the game once both players are connected
+    function startGame() {
+      gameState = ['', '', '', '', '', '', '', '', ''];
+      gameActive = true;
+      isMyTurn = playerSymbol === 'X'; // X always goes first
+      document.getElementById('message').textContent = `Player ${isMyTurn ? playerSymbol : opponentSymbol}'s turn`;
+      updateUI();
     }
 
     // Handle cell clicks
     function handleCellClick(event) {
       if (!isMyTurn || !gameActive || !isConnected) return;
       const cell = event.target;
-      const index = cell.getAttribute('data-index');
+      const index = parseInt(cell.getAttribute('data-index'));
       if (gameState[index] !== '') return;
 
       gameState[index] = playerSymbol;
       updateUI();
+
       const winner = checkWin();
       if (winner) {
+        // Send the move first, then the win message
+        conn.send({ type: 'move', index: index });
         document.getElementById('message').textContent = `Player ${winner} wins!`;
         gameActive = false;
+        conn.send({ type: 'end', message: `Player ${winner} wins!` });
       } else if (gameState.every(cell => cell !== '')) {
+        // Send the move first, then the draw message
+        conn.send({ type: 'move', index: index });
         document.getElementById('message').textContent = 'Draw!';
         gameActive = false;
+        conn.send({ type: 'end', message: 'Draw!' });
       } else {
         isMyTurn = false;
         document.getElementById('message').textContent = `Player ${opponentSymbol}'s turn`;
-        conn.send(index);
+        conn.send({ type: 'move', index: index });
       }
     }
 
@@ -161,11 +187,18 @@
 
     // Reset the game
     function resetGame() {
+      if (!isConnected) {
+        document.getElementById('message').textContent = "Waiting for opponent...";
+        return;
+      }
       gameState = ['', '', '', '', '', '', '', '', ''];
       gameActive = true;
-      isMyTurn = playerSymbol === 'X';
-      document.getElementById('message').textContent = isConnected ? `Player ${isMyTurn ? playerSymbol : opponentSymbol}'s turn` : "Waiting for opponent...";
+      isMyTurn = playerSymbol === 'X'; // X always goes first
+      document.getElementById('message').textContent = `Player ${isMyTurn ? playerSymbol : opponentSymbol}'s turn`;
       updateUI();
+      if (conn) {
+        conn.send({ type: 'reset' });
+      }
     }
 
     // Update the UI based on game state
