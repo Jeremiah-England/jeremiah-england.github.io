@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplayer Tic-Tac-Toe</title>
+  <style>
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 5px;
+      margin: 20px auto;
+      width: 310px;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      border: 1px solid black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    #message {
+      text-align: center;
+      font-size: 20px;
+      margin: 10px;
+    }
+    #reset {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div>
+      <p>Your Peer ID: <span id="peerId"></span></p>
+      <p>Share this link with your friend: <span id="shareLink"></span></p>
+    </div>
+    <div id="board">
+      <div class="cell" data-index="0"></div>
+      <div class="cell" data-index="1"></div>
+      <div class="cell" data-index="2"></div>
+      <div class="cell" data-index="3"></div>
+      <div class="cell" data-index="4"></div>
+      <div class="cell" data-index="5"></div>
+      <div class="cell" data-index="6"></div>
+      <div class="cell" data-index="7"></div>
+      <div class="cell" data-index="8"></div>
+    </div>
+    <div id="message"></div>
+    <button id="reset">Reset Game</button>
+  </div>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script>
+    // Global variables
+    let playerSymbol;
+    let opponentSymbol;
+    let isMyTurn;
+    let isConnected = false;
+    let conn;
+    let gameState = ['', '', '', '', '', '', '', '', ''];
+    let gameActive = false;
+
+    const winningConditions = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+      [0, 4, 8], [2, 4, 6] // diagonals
+    ];
+
+    // Initialize PeerJS
+    const peer = new Peer();
+
+    peer.on('open', id => {
+      document.getElementById('peerId').textContent = id;
+      const shareUrl = `${window.location.origin}${window.location.pathname}?connectTo=${id}`;
+      document.getElementById('shareLink').textContent = shareUrl;
+
+      const connectTo = new URLSearchParams(window.location.search).get('connectTo');
+      if (connectTo) {
+        conn = peer.connect(connectTo);
+        conn.on('open', () => {
+          isConnected = true;
+          resetGame();
+        });
+        setupConnection(conn);
+        playerSymbol = 'O';
+        opponentSymbol = 'X';
+        document.getElementById('message').textContent = "Waiting for opponent to start...";
+      } else {
+        playerSymbol = 'X';
+        opponentSymbol = 'O';
+        document.getElementById('message').textContent = "Waiting for opponent...";
+      }
+    });
+
+    peer.on('connection', connection => {
+      conn = connection;
+      isConnected = true;
+      resetGame();
+      setupConnection(conn);
+    });
+
+    // Set up connection to handle incoming moves
+    function setupConnection(connection) {
+      connection.on('data', data => {
+        const index = data;
+        gameState[index] = opponentSymbol;
+        updateUI();
+        const winner = checkWin();
+        if (winner) {
+          document.getElementById('message').textContent = `Player ${winner} wins!`;
+          gameActive = false;
+        } else if (gameState.every(cell => cell !== '')) {
+          document.getElementById('message').textContent = 'Draw!';
+          gameActive = false;
+        } else {
+          isMyTurn = true;
+          document.getElementById('message').textContent = `Player ${playerSymbol}'s turn`;
+        }
+      });
+    }
+
+    // Handle cell clicks
+    function handleCellClick(event) {
+      if (!isMyTurn || !gameActive || !isConnected) return;
+      const cell = event.target;
+      const index = cell.getAttribute('data-index');
+      if (gameState[index] !== '') return;
+
+      gameState[index] = playerSymbol;
+      updateUI();
+      const winner = checkWin();
+      if (winner) {
+        document.getElementById('message').textContent = `Player ${winner} wins!`;
+        gameActive = false;
+      } else if (gameState.every(cell => cell !== '')) {
+        document.getElementById('message').textContent = 'Draw!';
+        gameActive = false;
+      } else {
+        isMyTurn = false;
+        document.getElementById('message').textContent = `Player ${opponentSymbol}'s turn`;
+        conn.send(index);
+      }
+    }
+
+    // Check for a win
+    function checkWin() {
+      for (const condition of winningConditions) {
+        const [a, b, c] = condition;
+        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+          return gameState[a];
+        }
+      }
+      return null;
+    }
+
+    // Reset the game
+    function resetGame() {
+      gameState = ['', '', '', '', '', '', '', '', ''];
+      gameActive = true;
+      isMyTurn = playerSymbol === 'X';
+      document.getElementById('message').textContent = isConnected ? `Player ${isMyTurn ? playerSymbol : opponentSymbol}'s turn` : "Waiting for opponent...";
+      updateUI();
+    }
+
+    // Update the UI based on game state
+    function updateUI() {
+      document.querySelectorAll('.cell').forEach((cell, index) => {
+        cell.textContent = gameState[index];
+      });
+    }
+
+    // Add event listeners
+    document.querySelectorAll('.cell').forEach(cell => cell.addEventListener('click', handleCellClick));
+    document.getElementById('reset').addEventListener('click', resetGame);
+  </script>
+</body>
+</html>
