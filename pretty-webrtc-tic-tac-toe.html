@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplayer Tic-Tac-Toe</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #6e8efb, #a777e3);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      max-width: 500px;
+      width: 100%;
+      margin: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #fff;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .info-box {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .info-box p {
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .share-wrapper {
+      position: relative;
+    }
+
+    #shareLink {
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 8px;
+      border-radius: 6px;
+      word-break: break-all;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    #shareLink:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    #copy-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #a777e3;
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    #playerInfo {
+      font-weight: 600;
+      font-size: 18px;
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 10px;
+      margin: 20px auto;
+      max-width: 350px;
+    }
+
+    .cell {
+      aspect-ratio: 1/1;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .cell:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: scale(1.05);
+    }
+
+    .cell.x {
+      color: #ff7675;
+    }
+
+    .cell.o {
+      color: #74b9ff;
+    }
+    
+    .cell.win {
+      background: rgba(46, 213, 115, 0.3);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(46, 213, 115, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(46, 213, 115, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(46, 213, 115, 0); }
+    }
+
+    #message {
+      text-align: center;
+      font-size: 20px;
+      margin: 20px 0;
+      font-weight: 600;
+      height: 30px;
+    }
+
+    #reset {
+      display: block;
+      margin: 20px auto;
+      padding: 12px 25px;
+      font-size: 16px;
+      background: #a777e3;
+      color: white;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    #reset:hover {
+      background: #8e54e9;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .attribution {
+      margin-top: 30px;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        padding: 20px 15px;
+      }
+      
+      #board {
+        grid-gap: 5px;
+      }
+      
+      .cell {
+        font-size: 2.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tic-Tac-Toe</h1>
+    <div class="info-box">
+      <p><strong>Your Peer ID:</strong> <span id="peerId"></span></p>
+      <p><strong>Share this link:</strong></p>
+      <div class="share-wrapper">
+        <div id="shareLink"></div>
+        <button id="copy-btn">Copy</button>
+      </div>
+    </div>
+    <div id="playerInfo"></div>
+    <div id="board">
+      <div class="cell" data-index="0"></div>
+      <div class="cell" data-index="1"></div>
+      <div class="cell" data-index="2"></div>
+      <div class="cell" data-index="3"></div>
+      <div class="cell" data-index="4"></div>
+      <div class="cell" data-index="5"></div>
+      <div class="cell" data-index="6"></div>
+      <div class="cell" data-index="7"></div>
+      <div class="cell" data-index="8"></div>
+    </div>
+    <div id="message"></div>
+    <button id="reset">Reset Game</button>
+  </div>
+  
+  <div class="attribution">
+    Core networking and concurrency logic by Grok3 | UI design and enhancements by Claude
+  </div>
+  
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script>
+    // Global variables
+    let playerSymbol;
+    let opponentSymbol;
+    let isMyTurn = false;
+    let isConnected = false;
+    let conn;
+    let gameState = ['', '', '', '', '', '', '', '', ''];
+    let gameActive = false;
+    let winningLine = null;
+
+    const winningConditions = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+      [0, 4, 8], [2, 4, 6] // diagonals
+    ];
+
+    // Initialize PeerJS
+    const peer = new Peer();
+
+    peer.on('open', id => {
+      document.getElementById('peerId').textContent = id;
+      const shareUrl = `${window.location.origin}${window.location.pathname}?connectTo=${id}`;
+      document.getElementById('shareLink').textContent = shareUrl;
+
+      const connectTo = new URLSearchParams(window.location.search).get('connectTo');
+      if (connectTo) {
+        conn = peer.connect(connectTo);
+        conn.on('open', () => {
+          isConnected = true;
+          playerSymbol = 'O';
+          opponentSymbol = 'X';
+          document.getElementById('playerInfo').textContent = "You are Player O";
+          document.getElementById('playerInfo').style.color = "#74b9ff";
+          startGame();
+        });
+        setupConnection(conn);
+      } else {
+        playerSymbol = 'X';
+        opponentSymbol = 'O';
+        document.getElementById('playerInfo').textContent = "You are Player X";
+        document.getElementById('playerInfo').style.color = "#ff7675";
+        document.getElementById('message').textContent = "Waiting for opponent...";
+      }
+    });
+
+    peer.on('connection', connection => {
+      conn = connection;
+      isConnected = true;
+      setupConnection(conn);
+      startGame();
+    });
+
+    // Copy link button functionality
+    document.getElementById('copy-btn').addEventListener('click', () => {
+      const shareLink = document.getElementById('shareLink').textContent;
+      navigator.clipboard.writeText(shareLink).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = "Copied!";
+        setTimeout(() => btn.textContent = "Copy", 2000);
+      });
+    });
+
+    // Set up connection to handle incoming data
+    function setupConnection(connection) {
+      connection.on('data', data => {
+        if (data.type === 'move') {
+          const index = data.index;
+          gameState[index] = opponentSymbol;
+          updateUI();
+          const winResult = checkWin();
+          if (winResult) {
+            document.getElementById('message').textContent = `Player ${winResult.winner} wins!`;
+            highlightWinningCells(winResult.line);
+            gameActive = false;
+          } else if (gameState.every(cell => cell !== '')) {
+            document.getElementById('message').textContent = 'It\'s a draw!';
+            gameActive = false;
+          } else {
+            isMyTurn = true;
+            document.getElementById('message').textContent = `Your turn`;
+          }
+        } else if (data.type === 'end') {
+          gameActive = false;
+          document.getElementById('message').textContent = data.message;
+          if (data.winLine) {
+            highlightWinningCells(data.winLine);
+          }
+          updateUI();
+        } else if (data.type === 'reset') {
+          startGame();
+        }
+      });
+    }
+
+    // Start the game once both players are connected
+    function startGame() {
+      gameState = ['', '', '', '', '', '', '', '', ''];
+      gameActive = true;
+      isMyTurn = playerSymbol === 'X'; // X always goes first
+      document.getElementById('message').textContent = isMyTurn ? "Your turn" : "Opponent's turn";
+      // Clear any winning highlights
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.classList.remove('win', 'x', 'o');
+      });
+      updateUI();
+    }
+
+    // Handle cell clicks
+    function handleCellClick(event) {
+      if (!isMyTurn || !gameActive || !isConnected) return;
+      const cell = event.target;
+      const index = parseInt(cell.getAttribute('data-index'));
+      if (gameState[index] !== '') return;
+
+      gameState[index] = playerSymbol;
+      updateUI();
+
+      const winResult = checkWin();
+      if (winResult) {
+        highlightWinningCells(winResult.line);
+        // Send the move first, then the win message
+        conn.send({ type: 'move', index: index });
+        document.getElementById('message').textContent = "You win!";
+        gameActive = false;
+        conn.send({ 
+          type: 'end', 
+          message: `Player ${winResult.winner} wins!`,
+          winLine: winResult.line
+        });
+      } else if (gameState.every(cell => cell !== '')) {
+        // Send the move first, then the draw message
+        conn.send({ type: 'move', index: index });
+        document.getElementById('message').textContent = 'It\'s a draw!';
+        gameActive = false;
+        conn.send({ type: 'end', message: 'It\'s a draw!' });
+      } else {
+        isMyTurn = false;
+        document.getElementById('message').textContent = "Opponent's turn";
+        conn.send({ type: 'move', index: index });
+      }
+    }
+
+    // Check for a win
+    function checkWin() {
+      for (let i = 0; i < winningConditions.length; i++) {
+        const [a, b, c] = winningConditions[i];
+        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+          return {
+            winner: gameState[a],
+            line: winningConditions[i]
+          };
+        }
+      }
+      return null;
+    }
+
+    function highlightWinningCells(winningLine) {
+      if (!winningLine) return;
+      
+      winningLine.forEach(index => {
+        const cell = document.querySelector(`.cell[data-index="${index}"]`);
+        cell.classList.add('win');
+      });
+    }
+
+    // Reset the game
+    function resetGame() {
+      if (!isConnected) {
+        document.getElementById('message').textContent = "Waiting for opponent...";
+        return;
+      }
+      
+      // Reset game state
+      gameState = ['', '', '', '', '', '', '', '', ''];
+      gameActive = true;
+      isMyTurn = playerSymbol === 'X'; // X always goes first
+      
+      // Update UI for the reset
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.textContent = '';
+        cell.classList.remove('win', 'x', 'o');
+      });
+      
+      document.getElementById('message').textContent = isMyTurn ? "Your turn" : "Opponent's turn";
+      
+      // Notify the other player
+      if (conn) {
+        conn.send({ type: 'reset' });
+      }
+    }
+
+    // Update the UI based on game state
+    function updateUI() {
+      document.querySelectorAll('.cell').forEach((cell, index) => {
+        cell.textContent = gameState[index];
+        cell.classList.remove('x', 'o');
+        
+        if (gameState[index] === 'X') {
+          cell.classList.add('x');
+        } else if (gameState[index] === 'O') {
+          cell.classList.add('o');
+        }
+      });
+    }
+
+    // Add event listeners
+    document.querySelectorAll('.cell').forEach(cell => cell.addEventListener('click', handleCellClick));
+    document.getElementById('reset').addEventListener('click', resetGame);
+  </script>
+</body>
+</html>
