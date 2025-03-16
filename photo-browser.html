@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Media Viewer</title>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #5fb0d1;
+            --dark-bg: #1e1e2e;
+            --light-bg: #f5f5f7;
+            --dark-text: #121212;
+            --light-text: #f0f0f0;
+            --sidebar-width: 1000px;
+            --sidebar-collapsed-width: 30px;
+            --thumbnail-size: 200px;
+            --border-color: #dddddd;
+            --border-color-dark: #444444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            transition: background-color 0.3s, color 0.3s;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body.dark-mode {
+            background-color: var(--dark-bg);
+            color: var(--light-text);
+        }
+
+        body.dark-mode .sidebar {
+            border-right: 1px solid var(--border-color-dark);
+            background-color: #252538;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        body.dark-mode header {
+            border-bottom: 1px solid var(--border-color-dark);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+        }
+
+        .counter {
+            margin-left: 15px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .main-container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            min-width: 250px; /* Increased from 200px */
+            height: 100%;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+            transition: width 0.3s ease;
+            background-color: #f0f0f0;
+            position: relative;
+            resize: horizontal;
+            overflow-x: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+            min-width: 0;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            right: -15px;
+            top: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 20;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        body.dark-mode .sidebar-header {
+            border-bottom: 1px solid var(--border-color-dark);
+        }
+
+        .collapsed .sidebar-content,
+        .collapsed .sidebar-header {
+            display: none;
+        }
+
+        .directory-list {
+            padding: 10px 0;
+        }
+
+        .directory-item {
+            padding: 2px 15px 2px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            transition: background-color 0.2s;
+            position: relative;
+        }
+
+        .directory-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        body.dark-mode .directory-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .directory-item.active {
+            background-color: rgba(74, 111, 165, 0.2);
+            font-weight: 500;
+        }
+
+        .folder-icon {
+            margin-right: 8px;
+            color: #ffc107;
+            flex-shrink: 0;
+        }
+
+        .folder-name {
+            flex-grow: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            min-width: 0;
+            position: relative;
+        }
+
+        .folder-name:hover::after {
+            content: attr(data-fullname);
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
+            z-index: 10;
+            white-space: normal;
+            left: 0;
+            top: 100%;
+        }
+
+        .expand-icon {
+            margin-right: 5px;
+            transition: transform 0.2s;
+            font-size: 10px;
+            width: 12px;
+            display: inline-block;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .expanded > .expand-icon {
+            transform: rotate(90deg);
+        }
+
+        .subdirectories {
+            margin-left: 20px;
+            display: none;
+            flex-direction: column;
+        }
+
+        .expanded > .subdirectories,
+        .expanded + .subdirectories {
+            display: flex;
+        }
+
+        .content-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            position: relative;
+        }
+
+        #gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(var(--thumbnail-size), 1fr));
+            gap: 15px;
+        }
+
+        .media-item {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            aspect-ratio: 1/1;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .media-item:hover {
+            transform: scale(1.03);
+        }
+
+        .media-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .media-type-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0,0,0,0.6);
+            color: white;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .file-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #fullscreen-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #fullscreen-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1001;
+        }
+
+        #fullscreen-content {
+            max-height: 90vh;
+            max-width: 90vw;
+            position: relative;
+            z-index: 1002;
+        }
+
+        #fullscreen-content img {
+            max-height: 90vh;
+            max-width: 90vw;
+            object-fit: contain;
+        }
+
+        #fullscreen-content video {
+            max-height: 90vh;
+            max-width: 90vw;
+        }
+
+        .fullscreen-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 1003;
+        }
+
+        .fullscreen-btn {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .fullscreen-btn:hover {
+            background-color: rgba(255,255,255,0.4);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            z-index: 1003;
+        }
+
+        .loading {
+            text-align: center;
+            margin: 30px 0;
+            font-size: 1.2rem;
+            display: none;
+        }
+
+        .no-files {
+            text-align: center;
+            margin: 30px 0;
+            font-size: 1.2rem;
+            display: none;
+        }
+
+        .breadcrumb {
+            padding: 10px 5px;
+            overflow-x: auto;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+
+        body.dark-mode .breadcrumb {
+            border-bottom: 1px solid var(--border-color-dark);
+        }
+
+        .breadcrumb span {
+            opacity: 0.7;
+        }
+
+        .breadcrumb a {
+            color: var(--primary-color);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            padding: 10px 15px;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            opacity: 0.7;
+            text-align: center;
+        }
+
+        body.dark-mode footer {
+            border-top: 1px solid var(--border-color-dark);
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --thumbnail-size: 150px;
+                --sidebar-width: 200px;
+            }
+            
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        .directory-container {
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Local Media Viewer</h1>
+        <div class="controls">
+            <button id="directory-btn" onclick="selectRootDirectory()">Select Root Directory</button>
+            <div class="theme-toggle">
+                <button id="theme-toggle-btn" onclick="toggleTheme()">Toggle Dark Mode</button>
+            </div>
+            <div class="counter" id="file-counter"></div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-toggle" onclick="toggleSidebar()">◀</div>
+            <div class="sidebar-header">
+                Directory Explorer
+            </div>
+            <div class="sidebar-content">
+                <div class="directory-list" id="directory-tree">
+                    <div class="loading" id="dir-loading">Loading directories...</div>
+                </div>
+            </div>
+        </div>
+        <div class="content-area">
+            <div class="breadcrumb" id="breadcrumb"></div>
+            <div class="loading" id="loading">Loading media files...</div>
+            <div class="no-files" id="no-files">No media files found in the selected directory</div>
+            <div id="gallery"></div>
+        </div>
+    </div>
+
+    <div id="fullscreen-overlay">
+        <div id="fullscreen-backdrop"></div>
+        <button class="close-btn" onclick="closeFullscreen()">×</button>
+        <div id="fullscreen-content"></div>
+        <div class="fullscreen-controls">
+            <button class="fullscreen-btn" onclick="prevMedia()">❮</button>
+            <button class="fullscreen-btn" onclick="nextMedia()">❯</button>
+        </div>
+    </div>
+
+    <footer>
+        <p>Original app by grok3 | Enhanced by Claude with improved UI, directory explorer, and media viewing</p>
+    </footer>
+
+    <script>
+        const state = {
+            mediaFiles: [],
+            currentIndex: 0,
+            darkMode: false,
+            rootDirHandle: null,
+            currentDirHandle: null,
+            directoryPath: [],
+            sidebarCollapsed: false
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                toggleTheme();
+            }
+            await loadPreviousSession();
+            document.getElementById('fullscreen-backdrop').addEventListener('click', closeFullscreen);
+        });
+
+        async function loadPreviousSession() {
+            try {
+                const rootHandleData = localStorage.getItem('rootDirectoryHandle');
+                if (!rootHandleData) return;
+                const storedData = JSON.parse(rootHandleData);
+                if (storedData && storedData.id) {
+                    const handles = await window.indexedDB.databases();
+                    if (handles && handles.some(h => h.name === 'local-media-viewer-handles')) {
+                        try {
+                            state.rootDirHandle = await restoreDirectoryHandle();
+                            if (state.rootDirHandle) {
+                                const permission = await verifyPermission(state.rootDirHandle, true);
+                                if (permission) {
+                                    state.currentDirHandle = state.rootDirHandle;
+                                    await loadDirectoryTree();
+                                    await loadMediaFromDirectory(state.rootDirHandle);
+                                    updateBreadcrumb();
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error restoring directory handle:', error);
+                            localStorage.removeItem('rootDirectoryHandle');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading previous session:', error);
+            }
+        }
+
+        async function restoreDirectoryHandle() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('local-media-viewer-handles', 1);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('handles')) {
+                        db.createObjectStore('handles', { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = async (event) => {
+                    const db = event.target.result;
+                    const transaction = db.transaction('handles', 'readonly');
+                    const store = transaction.objectStore('handles');
+                    const getRequest = store.get('root-dir-handle');
+                    getRequest.onsuccess = () => resolve(getRequest.result ? getRequest.result.handle : null);
+                    getRequest.onerror = () => reject(getRequest.error);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function saveDirectoryHandle(handle) {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('local-media-viewer-handles', 1);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('handles')) {
+                        db.createObjectStore('handles', { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    const transaction = db.transaction('handles', 'readwrite');
+                    const store = transaction.objectStore('handles');
+                    const saveRequest = store.put({ id: 'root-dir-handle', handle: handle });
+                    saveRequest.onsuccess = () => {
+                        localStorage.setItem('rootDirectoryHandle', JSON.stringify({
+                            id: 'root-dir-handle',
+                            name: handle.name,
+                            saved: new Date().toISOString()
+                        }));
+                        resolve();
+                    };
+                    saveRequest.onerror = () => reject(saveRequest.error);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function verifyPermission(fileHandle, readWrite) {
+            const options = { mode: readWrite ? 'readwrite' : 'read' };
+            if ((await fileHandle.queryPermission(options)) === 'granted') return true;
+            if ((await fileHandle.requestPermission(options)) === 'granted') return true;
+            return false;
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            state.darkMode = !state.darkMode;
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleButton = sidebar.querySelector('.sidebar-toggle');
+            state.sidebarCollapsed = !state.sidebarCollapsed;
+            sidebar.classList.toggle('collapsed', state.sidebarCollapsed);
+            toggleButton.textContent = state.sidebarCollapsed ? '▶' : '◀';
+            const content = sidebar.querySelector('.sidebar-content');
+            content.style.display = state.sidebarCollapsed ? 'none' : 'block';
+        }
+
+        async function selectRootDirectory() {
+            try {
+                const pickerOptions = { startIn: 'pictures', id: 'local-media-viewer' };
+                const dirHandle = await window.showDirectoryPicker(pickerOptions);
+                const permission = await verifyPermission(dirHandle, true);
+                if (!permission) {
+                    alert('Permission to access directory was denied');
+                    return;
+                }
+                state.rootDirHandle = dirHandle;
+                state.currentDirHandle = dirHandle;
+                state.directoryPath = [];
+                await saveDirectoryHandle(dirHandle);
+                await loadDirectoryTree();
+                await loadMediaFromDirectory(dirHandle);
+                updateBreadcrumb();
+            } catch (error) {
+                console.error('Error selecting directory:', error);
+                alert('Could not access directory. Please try again or check browser compatibility.');
+            }
+        }
+
+        async function navigateToDirectory(dirHandle, pathIndex = -1) {
+            try {
+                const permission = await verifyPermission(dirHandle, false);
+                if (!permission) {
+                    alert('Permission to access directory was denied');
+                    return;
+                }
+                state.currentDirHandle = dirHandle;
+                if (pathIndex >= 0) state.directoryPath = state.directoryPath.slice(0, pathIndex + 1);
+                await loadMediaFromDirectory(dirHandle);
+                updateBreadcrumb();
+                updateActiveDirectory();
+            } catch (error) {
+                console.error('Error navigating to directory:', error);
+                alert('Could not access directory. Please try again.');
+            }
+        }
+
+        async function loadDirectoryTree() {
+            if (!state.rootDirHandle) return;
+            const treeContainer = document.getElementById('directory-tree');
+            treeContainer.innerHTML = '<div class="loading" id="dir-loading">Loading directories...</div>';
+            document.getElementById('dir-loading').style.display = 'block';
+            try {
+                const rootItem = await createDirectoryTreeItem(state.rootDirHandle, true);
+                treeContainer.innerHTML = '';
+                treeContainer.appendChild(rootItem);
+                updateActiveDirectory();
+            } catch (error) {
+                console.error('Error loading directory tree:', error);
+                treeContainer.innerHTML = '<div>Error loading directories</div>';
+            }
+        }
+
+        async function createDirectoryTreeItem(dirHandle, isRoot = false, level = 0) {
+            const directoryItem = document.createElement('div');
+            directoryItem.className = 'directory-item';
+            directoryItem.setAttribute('data-path', dirHandle.name);
+            directoryItem.setAttribute('data-level', level);
+            directoryItem.dirHandle = dirHandle;
+            
+            const expandIcon = document.createElement('span');
+            expandIcon.className = 'expand-icon';
+            expandIcon.textContent = '▶';
+            directoryItem.appendChild(expandIcon);
+            
+            const folderIcon = document.createElement('span');
+            folderIcon.className = 'folder-icon';
+            folderIcon.textContent = '📁';
+            directoryItem.appendChild(folderIcon);
+            
+            const folderName = document.createElement('span');
+            folderName.className = 'folder-name';
+            folderName.textContent = isRoot ? `${dirHandle.name} (Root)` : dirHandle.name;
+            folderName.setAttribute('data-fullname', dirHandle.name);
+            directoryItem.appendChild(folderName);
+            
+            // Create a container for the entire directory item and its children
+            const directoryContainer = document.createElement('div');
+            directoryContainer.className = 'directory-container';
+            directoryContainer.appendChild(directoryItem);
+            
+            const subdirectoriesContainer = document.createElement('div');
+            subdirectoriesContainer.className = 'subdirectories';
+            directoryContainer.appendChild(subdirectoriesContainer);
+            
+            directoryItem.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const shouldNavigate = !directoryItem.classList.contains('expanded') || 
+                                      e.target === folderIcon || 
+                                      e.target === folderName;
+                if (shouldNavigate && dirHandle !== state.currentDirHandle) {
+                    if (isRoot) state.directoryPath = [];
+                    else state.directoryPath.push({ name: dirHandle.name, handle: dirHandle });
+                    await navigateToDirectory(dirHandle);
+                }
+                const isExpanded = directoryItem.classList.toggle('expanded');
+                if (isExpanded && subdirectoriesContainer.children.length === 0) {
+                    const loadingItem = document.createElement('div');
+                    loadingItem.textContent = 'Loading...';
+                    loadingItem.style.padding = '5px 15px';
+                    loadingItem.style.opacity = '0.7';
+                    subdirectoriesContainer.appendChild(loadingItem);
+                    try {
+                        const subdirectories = [];
+                        for await (const entry of dirHandle.values()) {
+                            if (entry.kind === 'directory') subdirectories.push(entry);
+                        }
+                        subdirectories.sort((a, b) => a.name.localeCompare(b.name));
+                        subdirectoriesContainer.innerHTML = '';
+                        if (subdirectories.length === 0) {
+                            const emptyItem = document.createElement('div');
+                            emptyItem.textContent = 'No subdirectories';
+                            emptyItem.style.padding = '5px 15px';
+                            emptyItem.style.opacity = '0.7';
+                            emptyItem.style.fontStyle = 'italic';
+                            subdirectoriesContainer.appendChild(emptyItem);
+                        } else {
+                            console.log(`Loading ${subdirectories.length} subdirectories for ${dirHandle.name}`);
+                            for (const subdir of subdirectories) {
+                                const subdirItem = await createDirectoryTreeItem(subdir, false, level + 1);
+                                subdirectoriesContainer.appendChild(subdirItem);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error loading subdirectories:', error);
+                        subdirectoriesContainer.innerHTML = '<div style="padding: 5px 15px; color: red;">Error loading subdirectories</div>';
+                    }
+                }
+            });
+            
+            return directoryContainer;
+        }
+
+        function updateActiveDirectory() {
+            const allItems = document.querySelectorAll('.directory-item');
+            allItems.forEach(item => item.classList.remove('active'));
+            for (const item of allItems) {
+                if (item.dirHandle && item.dirHandle === state.currentDirHandle) {
+                    item.classList.add('active');
+                    let parent = item.parentElement;
+                    while (parent && parent.classList.contains('subdirectories')) {
+                        parent.parentElement.classList.add('expanded');
+                        parent = parent.parentElement.parentElement;
+                    }
+                    break;
+                }
+            }
+        }
+
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('breadcrumb');
+            breadcrumb.innerHTML = '';
+            const rootLink = document.createElement('a');
+            rootLink.textContent = state.rootDirHandle ? state.rootDirHandle.name : 'Root';
+            rootLink.onclick = () => navigateToDirectory(state.rootDirHandle, -1);
+            breadcrumb.appendChild(rootLink);
+            state.directoryPath.forEach((segment, index) => {
+                const separator = document.createElement('span');
+                separator.textContent = ' / ';
+                breadcrumb.appendChild(separator);
+                const link = document.createElement('a');
+                link.textContent = segment.name;
+                link.onclick = () => navigateToDirectory(segment.handle, index);
+                breadcrumb.appendChild(link);
+            });
+        }
+
+        function isMediaFile(filename) {
+            return /\.(jpg|jpeg|png|gif|bmp|webp|mp4|webm|avi|mov|mkv)$/i.test(filename);
+        }
+
+        function isVideo(filename) {
+            return /\.(mp4|webm|avi|mov|mkv)$/i.test(filename);
+        }
+
+        async function loadMediaFromDirectory(dirHandle) {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('gallery').innerHTML = '';
+                document.getElementById('no-files').style.display = 'none';
+                state.mediaFiles = [];
+                state.currentIndex = 0;
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file' && isMediaFile(entry.name)) {
+                        const file = await entry.getFile();
+                        const mediaUrl = URL.createObjectURL(file);
+                        state.mediaFiles.push({
+                            name: entry.name,
+                            url: mediaUrl,
+                            isVideo: isVideo(entry.name),
+                            file: file
+                        });
+                    }
+                }
+                document.getElementById('file-counter').textContent = `${state.mediaFiles.length} media files`;
+                if (state.mediaFiles.length === 0) {
+                    document.getElementById('no-files').style.display = 'block';
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+                state.mediaFiles.sort((a, b) => a.name.localeCompare(b.name));
+                const gallery = document.getElementById('gallery');
+                state.mediaFiles.forEach((media, index) => {
+                    const mediaItem = document.createElement('div');
+                    mediaItem.className = 'media-item';
+                    mediaItem.setAttribute('data-index', index);
+                    mediaItem.onclick = () => openFullscreen(index);
+                    if (media.isVideo) {
+                        const video = document.createElement('video');
+                        video.src = media.url;
+                        video.muted = true;
+                        video.className = 'media-thumbnail';
+                        video.onloadedmetadata = () => video.currentTime = Math.min(3, video.duration / 2);
+                        video.onloadeddata = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const img = document.createElement('img');
+                            img.src = canvas.toDataURL();
+                            img.className = 'media-thumbnail';
+                            mediaItem.innerHTML = '';
+                            mediaItem.appendChild(img);
+                            const indicator = document.createElement('div');
+                            indicator.className = 'media-type-indicator';
+                            indicator.textContent = 'VIDEO';
+                            mediaItem.appendChild(indicator);
+                            const fileName = document.createElement('div');
+                            fileName.className = 'file-name';
+                            fileName.textContent = media.name;
+                            mediaItem.appendChild(fileName);
+                        };
+                        mediaItem.appendChild(video);
+                    } else {
+                        const img = document.createElement('img');
+                        img.src = media.url;
+                        img.alt = media.name;
+                        img.className = 'media-thumbnail';
+                        const fileName = document.createElement('div');
+                        fileName.className = 'file-name';
+                        fileName.textContent = media.name;
+                        mediaItem.appendChild(img);
+                        mediaItem.appendChild(fileName);
+                    }
+                    gallery.appendChild(mediaItem);
+                });
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                console.error('Error loading media from directory:', error);
+                document.getElementById('loading').style.display = 'none';
+                alert('Could not access directory. Please try again or check browser compatibility.');
+            }
+        }
+
+        function openFullscreen(index) {
+            state.currentIndex = index;
+            const media = state.mediaFiles[index];
+            const overlay = document.getElementById('fullscreen-overlay');
+            const content = document.getElementById('fullscreen-content');
+            content.innerHTML = '';
+            if (media.isVideo) {
+                const video = document.createElement('video');
+                video.src = media.url;
+                video.controls = true;
+                video.autoplay = true;
+                content.appendChild(video);
+            } else {
+                const img = document.createElement('img');
+                img.src = media.url;
+                img.alt = media.name;
+                content.appendChild(img);
+            }
+            overlay.style.display = 'flex';
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function closeFullscreen() {
+            document.getElementById('fullscreen-overlay').style.display = 'none';
+            document.removeEventListener('keydown', handleKeyPress);
+        }
+
+        function prevMedia() {
+            state.currentIndex = (state.currentIndex - 1 + state.mediaFiles.length) % state.mediaFiles.length;
+            openFullscreen(state.currentIndex);
+        }
+
+        function nextMedia() {
+            state.currentIndex = (state.currentIndex + 1) % state.mediaFiles.length;
+            openFullscreen(state.currentIndex);
+        }
+
+        function handleKeyPress(e) {
+            switch(e.key) {
+                case 'Escape': closeFullscreen(); break;
+                case 'ArrowLeft': prevMedia(); break;
+                case 'ArrowRight': nextMedia(); break;
+            }
+        }
+    </script>
+</body>
+</html>
