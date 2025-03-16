@@ -687,9 +687,27 @@
             directoryItem.setAttribute('data-level', level);
             directoryItem.dirHandle = dirHandle;
             
+            // Check if this directory has subdirectories
+            let hasSubdirectories = false;
+            try {
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'directory') {
+                        hasSubdirectories = true;
+                        break;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking for subdirectories:', error);
+            }
+            
+            // Only add expand icon if it has subdirectories
             const expandIcon = document.createElement('span');
             expandIcon.className = 'expand-icon';
-            expandIcon.textContent = '▶';
+            if (hasSubdirectories) {
+                expandIcon.textContent = '▶';
+            } else {
+                expandIcon.style.visibility = 'hidden'; // Hide the icon but keep the space
+            }
             directoryItem.appendChild(expandIcon);
             
             const folderIcon = document.createElement('span');
@@ -722,37 +740,41 @@
                     else state.directoryPath.push({ name: dirHandle.name, handle: dirHandle });
                     await navigateToDirectory(dirHandle);
                 }
-                const isExpanded = directoryItem.classList.toggle('expanded');
-                if (isExpanded && subdirectoriesContainer.children.length === 0) {
-                    const loadingItem = document.createElement('div');
-                    loadingItem.textContent = 'Loading...';
-                    loadingItem.style.padding = '5px 15px';
-                    loadingItem.style.opacity = '0.7';
-                    subdirectoriesContainer.appendChild(loadingItem);
-                    try {
-                        const subdirectories = [];
-                        for await (const entry of dirHandle.values()) {
-                            if (entry.kind === 'directory') subdirectories.push(entry);
-                        }
-                        subdirectories.sort((a, b) => a.name.localeCompare(b.name));
-                        subdirectoriesContainer.innerHTML = '';
-                        if (subdirectories.length === 0) {
-                            const emptyItem = document.createElement('div');
-                            emptyItem.textContent = 'No subdirectories';
-                            emptyItem.style.padding = '5px 15px';
-                            emptyItem.style.opacity = '0.7';
-                            emptyItem.style.fontStyle = 'italic';
-                            subdirectoriesContainer.appendChild(emptyItem);
-                        } else {
-                            console.log(`Loading ${subdirectories.length} subdirectories for ${dirHandle.name}`);
-                            for (const subdir of subdirectories) {
-                                const subdirItem = await createDirectoryTreeItem(subdir, false, level + 1);
-                                subdirectoriesContainer.appendChild(subdirItem);
+                
+                // Only toggle expanded state if there are subdirectories
+                if (hasSubdirectories) {
+                    const isExpanded = directoryItem.classList.toggle('expanded');
+                    if (isExpanded && subdirectoriesContainer.children.length === 0) {
+                        const loadingItem = document.createElement('div');
+                        loadingItem.textContent = 'Loading...';
+                        loadingItem.style.padding = '5px 15px';
+                        loadingItem.style.opacity = '0.7';
+                        subdirectoriesContainer.appendChild(loadingItem);
+                        try {
+                            const subdirectories = [];
+                            for await (const entry of dirHandle.values()) {
+                                if (entry.kind === 'directory') subdirectories.push(entry);
                             }
+                            subdirectories.sort((a, b) => a.name.localeCompare(b.name));
+                            subdirectoriesContainer.innerHTML = '';
+                            if (subdirectories.length === 0) {
+                                const emptyItem = document.createElement('div');
+                                emptyItem.textContent = 'No subdirectories';
+                                emptyItem.style.padding = '5px 15px';
+                                emptyItem.style.opacity = '0.7';
+                                emptyItem.style.fontStyle = 'italic';
+                                subdirectoriesContainer.appendChild(emptyItem);
+                            } else {
+                                console.log(`Loading ${subdirectories.length} subdirectories for ${dirHandle.name}`);
+                                for (const subdir of subdirectories) {
+                                    const subdirItem = await createDirectoryTreeItem(subdir, false, level + 1);
+                                    subdirectoriesContainer.appendChild(subdirItem);
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error loading subdirectories:', error);
+                            subdirectoriesContainer.innerHTML = '<div style="padding: 5px 15px; color: red;">Error loading subdirectories</div>';
                         }
-                    } catch (error) {
-                        console.error('Error loading subdirectories:', error);
-                        subdirectoriesContainer.innerHTML = '<div style="padding: 5px 15px; color: red;">Error loading subdirectories</div>';
                     }
                 }
             });
