@@ -1,0 +1,101 @@
+/* Basic layout */
+:root {
+  --bg: #0b0f14;
+  --panel: #121822;
+  --panel-2: #1a2230;
+  --text: #e6edf3;
+  --muted: #9fb0c3;
+  --accent: #60a5fa;
+  --accent-2: #34d399;
+  --danger: #f87171;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  line-height: 1.4;
+}
+
+header, footer {
+  padding: 16px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid #233044;
+}
+
+main { padding: 16px 20px; }
+
+h1, h2 { margin: 0 0 12px 0; }
+
+#controls {
+  background: var(--panel);
+  border: 1px solid #233044;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.control-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.control-row label { display: flex; flex-direction: column; font-size: 14px; gap: 6px; }
+
+input[type="number"], input[type="text"] {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid #2e3a52;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid #2e3a52;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+button.secondary { background: var(--panel-2); border: 1px solid #2e3a52; }
+button.danger { background: var(--danger); }
+button.ghost { background: transparent; border: 1px dashed #2e3a52; color: var(--muted); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.scenarios-header { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+
+.scenario {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid #2e3a52;
+  border-radius: 12px;
+}
+
+.scenario .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.scenario .col { display: flex; flex-direction: column; gap: 6px; }
+
+.age-list { display: flex; flex-direction: column; gap: 6px; }
+.age-item { display: flex; gap: 6px; }
+
+#chart-section, #results { margin-top: 16px; }
+
+.metric-card {
+  display: inline-block;
+  min-width: 220px;
+  padding: 10px 12px;
+  margin: 6px 6px 0 0;
+  border-radius: 8px;
+  border: 1px solid #2e3a52;
+  background: #111827;
+}
+.metric-card h3 { margin: 0 0 6px 0; font-size: 14px; color: var(--muted); font-weight: 600; }
+.metric-card .val { font-size: 16px; }
+
+

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fertility Rate Calculator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <meta name="description" content="Interactive Leslie matrix toy model: explore how fertility ages and counts affect population growth, r, and doubling time.">
+</head>
+<body>
+  <header>
+    <h1>Fertility Rate Calculator</h1>
+    <p>Explore population growth via a simple Leslie matrix model. Add scenarios, set fertility ages and counts, and compare projections.</p>
+  </header>
+
+  <main>
+    <section id="controls">
+      <div class="control-row">
+        <label>
+          Max age
+          <input type="number" id="maxAge" value="100" min="1" />
+        </label>
+        <label>
+          Projection years
+          <input type="number" id="years" value="300" min="1" />
+        </label>
+        <label>
+          Initial population size
+          <input type="number" id="initialPop" value="1000" min="1" />
+        </label>
+        <label>
+          Y-axis scale
+          <select id="yScale">
+            <option value="linear" selected>Linear</option>
+            <option value="log">Logarithmic</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="scenarios-header">
+        <h2>Scenarios</h2>
+        <button id="addScenario">+ Add scenario</button>
+      </div>
+      <div id="scenarios"></div>
+    </section>
+
+    <section id="chart-section">
+      <h2>Population Projection</h2>
+      <canvas id="projectionChart" height="120"></canvas>
+    </section>
+
+    <section id="results">
+      <h2>Scenario Metrics</h2>
+      <div id="metrics"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Leslie model assumes survival of 1.0 until max age, death at max age, and daughters only (0.5 of births). This is an educational toy model.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script type="module" src="script.js"></script>
+</body>
+</html>
+
+
