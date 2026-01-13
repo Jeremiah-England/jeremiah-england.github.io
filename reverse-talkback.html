@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reverse Talkback</title>
+    <style>
+      :root {
+        --bg-start: #1a1a2e;
+        --bg-end: #16213e;
+        --card: rgba(255, 255, 255, 0.05);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.6);
+        --border: rgba(255, 255, 255, 0.1);
+
+        --btn-idle: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --btn-recording: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --btn-playing: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+
+        --glow-idle: rgba(102, 126, 234, 0.4);
+        --glow-recording: rgba(245, 87, 108, 0.5);
+        --glow-playing: rgba(79, 172, 254, 0.4);
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html, body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        min-height: 100%;
+        overflow-x: hidden;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 32px;
+        width: 100%;
+        max-width: 400px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(24px, 6vw, 32px);
+        font-weight: 700;
+        text-align: center;
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .subtitle {
+        margin: -20px 0 0;
+        font-size: 14px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      /* Main record button */
+      .big-button-wrapper {
+        position: relative;
+        width: clamp(180px, 50vw, 240px);
+        height: clamp(180px, 50vw, 240px);
+        margin-bottom: 32px; /* space for the label below */
+      }
+
+      .glow {
+        position: absolute;
+        inset: -20px;
+        border-radius: 50%;
+        background: var(--glow-idle);
+        filter: blur(40px);
+        opacity: 0.6;
+        transition: all 0.5s ease;
+        pointer-events: none;
+      }
+
+      .big-button-wrapper.recording .glow {
+        background: var(--glow-recording);
+        opacity: 0.8;
+        animation: pulse-glow 1s ease-in-out infinite;
+      }
+
+      .big-button-wrapper.playing .glow {
+        background: var(--glow-playing);
+        opacity: 0.7;
+      }
+
+      @keyframes pulse-glow {
+        0%, 100% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.15); opacity: 1; }
+      }
+
+      .big-button {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: none;
+        background: var(--btn-idle);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        box-shadow:
+          0 10px 40px rgba(0, 0, 0, 0.3),
+          0 0 0 6px rgba(255, 255, 255, 0.1),
+          inset 0 -8px 20px rgba(0, 0, 0, 0.2),
+          inset 0 8px 20px rgba(255, 255, 255, 0.1);
+      }
+
+      .big-button:hover {
+        transform: scale(1.05);
+      }
+
+      .big-button:active {
+        transform: scale(0.95);
+      }
+
+      .big-button-wrapper.recording .big-button {
+        background: var(--btn-recording);
+        animation: pulse-btn 1s ease-in-out infinite;
+      }
+
+      .big-button-wrapper.playing .big-button {
+        background: var(--btn-playing);
+      }
+
+      @keyframes pulse-btn {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.03); }
+      }
+
+      .btn-icon {
+        width: 40%;
+        height: 40%;
+        fill: white;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        transition: all 0.3s ease;
+      }
+
+      .big-button-wrapper.recording .btn-icon {
+        animation: icon-pulse 1s ease-in-out infinite;
+      }
+
+      @keyframes icon-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.9; }
+      }
+
+      .btn-label {
+        position: absolute;
+        bottom: -40px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+        opacity: 0.9;
+      }
+
+      /* Status message */
+      .status {
+        text-align: center;
+        font-size: 15px;
+        color: var(--muted);
+        min-height: 24px;
+        transition: all 0.3s ease;
+      }
+
+      .status.active {
+        color: var(--text);
+      }
+
+      /* Secondary buttons */
+      .secondary-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .secondary-btn {
+        padding: 12px 20px;
+        border-radius: 30px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        backdrop-filter: blur(10px);
+      }
+
+      .secondary-btn:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.12);
+        transform: translateY(-2px);
+      }
+
+      .secondary-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* Settings panel */
+      .settings-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .settings-toggle:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .settings-toggle svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+        transition: transform 0.3s ease;
+      }
+
+      .settings-toggle.open svg {
+        transform: rotate(90deg);
+      }
+
+      .settings-panel {
+        width: 100%;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease, opacity 0.3s ease;
+        opacity: 0;
+      }
+
+      .settings-panel.open {
+        max-height: 300px;
+        opacity: 1;
+      }
+
+      .settings-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+        margin-top: 12px;
+      }
+
+      .settings-grid {
+        display: grid;
+        gap: 20px;
+      }
+
+      .setting-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .setting-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .setting-value {
+        color: var(--text);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.1);
+        outline: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s ease;
+      }
+
+      input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.15);
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border: none;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Footer */
+      .footer {
+        margin-top: auto;
+        padding-top: 24px;
+      }
+
+      .footer a {
+        color: var(--muted);
+        font-size: 13px;
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+
+      .footer a:hover {
+        color: var(--text);
+      }
+
+      /* Responsive */
+      @media (max-height: 700px) {
+        .container {
+          gap: 20px;
+        }
+        .big-button-wrapper {
+          width: 160px;
+          height: 160px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Reverse Talkback</h1>
+      <p class="subtitle">Tap to record, hear it backwards!</p>
+
+      <div class="big-button-wrapper" id="buttonWrapper">
+        <div class="glow"></div>
+        <button class="big-button" id="mainButton" aria-label="Record">
+          <svg class="btn-icon" id="btnIcon" viewBox="0 0 24 24">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
+          </svg>
+        </button>
+        <span class="btn-label" id="btnLabel">Tap to record</span>
+      </div>
+
+      <div class="status" id="status">Ready</div>
+
+      <div class="secondary-buttons">
+        <button class="secondary-btn" id="playLast" disabled>Play Again</button>
+        <button class="secondary-btn" id="stopPlayback" disabled>Stop</button>
+      </div>
+
+      <button class="settings-toggle" id="settingsToggle">
+        <svg viewBox="0 0 24 24">
+          <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+        </svg>
+        Settings
+      </button>
+
+      <div class="settings-panel" id="settingsPanel">
+        <div class="settings-card">
+          <div class="settings-grid">
+            <div class="setting-row">
+              <div class="setting-label">
+                <span>Record time</span>
+                <span class="setting-value"><span id="durationValue">2.0</span>s</span>
+              </div>
+              <input id="duration" type="range" min="0.5" max="6" value="2" step="0.1" />
+            </div>
+            <div class="setting-row">
+              <div class="setting-label">
+                <span>Repeats</span>
+                <span class="setting-value" id="repeatsValue">3</span>
+              </div>
+              <input id="repeats" type="range" min="1" max="8" value="3" step="1" />
+            </div>
+            <div class="setting-row">
+              <div class="setting-label">
+                <span>Fade out</span>
+                <span class="setting-value"><span id="decayValue">60</span>%</span>
+              </div>
+              <input id="decay" type="range" min="0.1" max="0.95" value="0.6" step="0.01" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <a href="./index.html">&larr; Back</a>
+      </div>
+    </div>
+
+    <script>
+      const els = {
+        buttonWrapper: document.getElementById("buttonWrapper"),
+        mainButton: document.getElementById("mainButton"),
+        btnIcon: document.getElementById("btnIcon"),
+        btnLabel: document.getElementById("btnLabel"),
+        status: document.getElementById("status"),
+        playLast: document.getElementById("playLast"),
+        stopPlayback: document.getElementById("stopPlayback"),
+        settingsToggle: document.getElementById("settingsToggle"),
+        settingsPanel: document.getElementById("settingsPanel"),
+        duration: document.getElementById("duration"),
+        durationValue: document.getElementById("durationValue"),
+        repeats: document.getElementById("repeats"),
+        repeatsValue: document.getElementById("repeatsValue"),
+        decay: document.getElementById("decay"),
+        decayValue: document.getElementById("decayValue"),
+      };
+
+      const icons = {
+        mic: '<path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>',
+        stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+        play: '<path d="M8 5v14l11-7z"/>',
+      };
+
+      const state = {
+        audioContext: null,
+        mediaStream: null,
+        mediaRecorder: null,
+        recordTimeoutId: null,
+        lastReversedBuffer: null,
+        activeSources: [],
+        mode: "idle", // idle, recording, playing
+      };
+
+      function setStatus(text, active = false) {
+        els.status.textContent = text;
+        els.status.classList.toggle("active", active);
+      }
+
+      function getSettings() {
+        const durationSec = Number(els.duration.value);
+        const repeats = Math.max(1, Math.min(8, Math.floor(Number(els.repeats.value || 3))));
+        const decay = Math.max(0.1, Math.min(0.95, Number(els.decay.value)));
+        return { durationSec, repeats, decay };
+      }
+
+      function updateUI() {
+        const { durationSec, repeats, decay } = getSettings();
+        els.durationValue.textContent = durationSec.toFixed(1);
+        els.repeatsValue.textContent = repeats;
+        els.decayValue.textContent = Math.round(decay * 100);
+
+        const isRecording = state.mode === "recording";
+        const isPlaying = state.mode === "playing";
+
+        els.buttonWrapper.classList.toggle("recording", isRecording);
+        els.buttonWrapper.classList.toggle("playing", isPlaying);
+
+        if (isRecording) {
+          els.btnIcon.innerHTML = icons.stop;
+          els.btnLabel.textContent = "Tap to stop";
+        } else if (isPlaying) {
+          els.btnIcon.innerHTML = icons.play;
+          els.btnLabel.textContent = "Playing...";
+        } else {
+          els.btnIcon.innerHTML = icons.mic;
+          els.btnLabel.textContent = "Tap to record";
+        }
+
+        els.playLast.disabled = isRecording || !state.lastReversedBuffer;
+        els.stopPlayback.disabled = !isPlaying;
+      }
+
+      function stopAllPlayback() {
+        const sources = state.activeSources.splice(0, state.activeSources.length);
+        for (const source of sources) {
+          try { source.stop(); } catch (_) {}
+        }
+        if (state.mode === "playing") {
+          state.mode = "idle";
+        }
+        updateUI();
+      }
+
+      async function ensureAudioContext() {
+        if (!state.audioContext) {
+          state.audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" });
+        }
+        if (state.audioContext.state !== "running") {
+          await state.audioContext.resume();
+        }
+        return state.audioContext;
+      }
+
+      async function ensureMicStream() {
+        if (state.mediaStream) return state.mediaStream;
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        });
+        state.mediaStream = stream;
+        return stream;
+      }
+
+      function pickMimeType() {
+        const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/ogg"];
+        for (const type of candidates) {
+          if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) return type;
+        }
+        return "";
+      }
+
+      function reverseAudioBuffer(audioContext, buffer) {
+        const reversed = audioContext.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+        for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+          const src = buffer.getChannelData(ch);
+          const dst = reversed.getChannelData(ch);
+          for (let i = 0, j = src.length - 1; i < src.length; i++, j--) dst[i] = src[j];
+        }
+        return reversed;
+      }
+
+      function playReversedWithDieOut(audioContext, buffer, { repeats, decay }) {
+        stopAllPlayback();
+        if (!buffer) return;
+
+        state.mode = "playing";
+        updateUI();
+
+        const gapSec = 0.05;
+        const fadeInSec = 0.01;
+        const fadeOutSec = 0.06;
+        const startAt = audioContext.currentTime + 0.06;
+        const dur = buffer.duration;
+
+        for (let i = 0; i < repeats; i++) {
+          const source = audioContext.createBufferSource();
+          source.buffer = buffer;
+
+          const gainNode = audioContext.createGain();
+          const initialGain = Math.pow(decay, i);
+          const t0 = startAt + i * (dur + gapSec);
+          const t1 = t0 + dur;
+
+          const targetGain = Math.max(0.0001, initialGain);
+          gainNode.gain.setValueAtTime(0.0001, t0);
+          gainNode.gain.exponentialRampToValueAtTime(targetGain, t0 + fadeInSec);
+          gainNode.gain.setValueAtTime(targetGain, Math.max(t0 + fadeInSec, t1 - fadeOutSec));
+          gainNode.gain.exponentialRampToValueAtTime(0.0001, t1);
+
+          source.connect(gainNode).connect(audioContext.destination);
+          source.start(t0);
+          state.activeSources.push(source);
+
+          if (i === repeats - 1) {
+            source.onended = () => {
+              state.activeSources = [];
+              state.mode = "idle";
+              setStatus("Done!");
+              updateUI();
+            };
+          }
+        }
+
+        setStatus("Playing backwards...", true);
+      }
+
+      async function recordOnce() {
+        stopAllPlayback();
+        await ensureAudioContext();
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("Microphone not supported");
+        }
+        if (!window.MediaRecorder) {
+          throw new Error("Recording not supported");
+        }
+
+        const { durationSec, repeats, decay } = getSettings();
+        const stream = await ensureMicStream();
+
+        const mimeType = pickMimeType();
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        state.mediaRecorder = recorder;
+        state.mode = "recording";
+        updateUI();
+
+        const chunks = [];
+
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) chunks.push(e.data);
+        };
+
+        recorder.onstop = async () => {
+          clearTimeout(state.recordTimeoutId);
+          state.recordTimeoutId = null;
+
+          try {
+            setStatus("Processing...", true);
+            const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+            const arrayBuffer = await blob.arrayBuffer();
+            const audioContext = await ensureAudioContext();
+            const decoded = await audioContext.decodeAudioData(arrayBuffer);
+            const reversed = reverseAudioBuffer(audioContext, decoded);
+            state.lastReversedBuffer = reversed;
+
+            playReversedWithDieOut(audioContext, reversed, { repeats, decay });
+          } catch (err) {
+            state.mode = "idle";
+            setStatus(`Error: ${err?.message || String(err)}`);
+            updateUI();
+          }
+        };
+
+        recorder.start();
+        state.recordTimeoutId = setTimeout(() => {
+          if (recorder.state === "recording") recorder.stop();
+        }, durationSec * 1000);
+
+        setStatus(`Recording ${durationSec.toFixed(1)}s...`, true);
+      }
+
+      function stopRecording() {
+        clearTimeout(state.recordTimeoutId);
+        state.recordTimeoutId = null;
+        const recorder = state.mediaRecorder;
+        if (recorder?.state === "recording") recorder.stop();
+      }
+
+      async function playLast() {
+        try {
+          const audioContext = await ensureAudioContext();
+          const { repeats, decay } = getSettings();
+          playReversedWithDieOut(audioContext, state.lastReversedBuffer, { repeats, decay });
+        } catch (err) {
+          setStatus(`Error: ${err?.message || String(err)}`);
+        }
+      }
+
+      function handleMainButton() {
+        if (state.mode === "recording") {
+          stopRecording();
+        } else if (state.mode === "playing") {
+          stopAllPlayback();
+          setStatus("Stopped");
+        } else {
+          recordOnce().catch(err => {
+            state.mode = "idle";
+            setStatus(`Error: ${err?.message || String(err)}`);
+            updateUI();
+          });
+        }
+      }
+
+      // Event listeners
+      els.mainButton.addEventListener("click", handleMainButton);
+      els.playLast.addEventListener("click", playLast);
+      els.stopPlayback.addEventListener("click", () => {
+        stopAllPlayback();
+        setStatus("Stopped");
+      });
+
+      els.settingsToggle.addEventListener("click", () => {
+        els.settingsToggle.classList.toggle("open");
+        els.settingsPanel.classList.toggle("open");
+      });
+
+      els.duration.addEventListener("input", updateUI);
+      els.repeats.addEventListener("input", updateUI);
+      els.decay.addEventListener("input", updateUI);
+
+      // Spacebar to record/stop
+      document.addEventListener("keydown", (e) => {
+        if (e.code === "Space" && e.target === document.body) {
+          e.preventDefault();
+          handleMainButton();
+        }
+      });
+
+      updateUI();
+    </script>
+  </body>
+</html>
