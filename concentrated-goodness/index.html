@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A conversation about goodness as a trainable skill—and whether an AI could become better at it than we are.">
+  <meta name="theme-color" content="#152c2c">
+  <title>Concentrated Goodness in AIs · Jeremiah England</title>
+  <style>
+:root {
+  --paper: #f6f0e4;
+  --paper-deep: #e9dfcc;
+  --ink: #17302e;
+  --muted: #68736d;
+  --forest: #152c2c;
+  --forest-soft: #284643;
+  --gold: #c48a42;
+  --gold-soft: #ead4ac;
+  --rule: rgba(21, 44, 44, 0.16);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--ink);
+  background: var(--paper);
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(196, 138, 66, .13), transparent 30rem),
+    repeating-linear-gradient(90deg, rgba(21, 44, 44, .018) 0 1px, transparent 1px 4px);
+  pointer-events: none;
+}
+
+.page {
+  width: min(92vw, 980px);
+  margin: 0 auto;
+  padding: 28px 0 96px;
+  position: relative;
+}
+
+header {
+  padding: 76px 28px 58px;
+  margin-bottom: 52px;
+  text-align: center;
+  border-bottom: 1px solid var(--rule);
+  position: relative;
+}
+
+header::after {
+  content: "✦";
+  position: absolute;
+  left: 50%;
+  bottom: -12px;
+  width: 40px;
+  transform: translateX(-50%);
+  background: var(--paper);
+  color: var(--gold);
+}
+
+header h1 {
+  max-width: 760px;
+  margin: 12px auto 18px;
+  font-size: clamp(2.5rem, 7vw, 5.4rem);
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  line-height: .98;
+  color: var(--forest);
+}
+
+header .eyebrow,
+.label,
+.home-link,
+.sources h2 {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+}
+
+header .eyebrow {
+  margin: 0;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+header .subtitle {
+  max-width: 590px;
+  margin: 0 auto;
+  font-size: 1.06rem;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+header .credit {
+  margin: 18px auto 0;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: .7rem;
+  line-height: 1.55;
+  letter-spacing: .08em;
+  color: var(--forest-soft);
+}
+
+.home-link {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  color: var(--forest-soft);
+  font-size: .68rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.home-link:hover { color: var(--gold); }
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 42px;
+}
+
+.message { width: 100%; }
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 11px;
+  font-size: .67rem;
+  font-weight: 750;
+  color: var(--muted);
+}
+
+.label::after {
+  content: "";
+  width: 42px;
+  height: 1px;
+  background: var(--gold-soft);
+}
+
+.bubble {
+  max-width: 760px;
+  font-size: clamp(1rem, 1.7vw, 1.08rem);
+  line-height: 1.74;
+}
+
+.message.user {
+  padding: 26px 30px 28px;
+  border: 1px solid var(--rule);
+  border-radius: 3px 24px 3px 24px;
+  background: rgba(255, 255, 255, .34);
+  box-shadow: 0 16px 45px rgba(21, 44, 44, .06);
+}
+
+.message.user .bubble { max-width: none; }
+
+.message.assistant {
+  padding-left: clamp(18px, 6vw, 62px);
+  border-left: 2px solid var(--gold);
+}
+
+.message.assistant .label { color: var(--gold); }
+
+.essay-title {
+  margin: 1.4em 0 .7em;
+  font-size: clamp(1.65rem, 3.6vw, 2.35rem);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -.025em;
+  color: var(--forest);
+}
+
+.bubble p:first-child { margin-top: 0; }
+.bubble p:last-child { margin-bottom: 0; }
+.bubble p { margin: 0 0 1.12em; }
+.bubble strong { color: var(--forest); }
+.bubble em { text-decoration-color: var(--gold-soft); }
+
+.bubble a,
+.sources a {
+  color: var(--forest-soft);
+  text-decoration-color: var(--gold);
+  text-underline-offset: 3px;
+}
+
+.bubble ul,
+.bubble ol {
+  padding-left: 1.35em;
+  margin: .8em 0 1.3em;
+}
+
+.bubble li { padding-left: .35em; margin: .55em 0; }
+.bubble li::marker { color: var(--gold); }
+
+sup a {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: .72em;
+  font-weight: 700;
+  text-decoration: none !important;
+}
+
+.sources {
+  margin: 66px 0 0;
+  padding: 28px 0 0 clamp(18px, 6vw, 62px);
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: .88rem;
+  line-height: 1.6;
+}
+
+.sources h2 {
+  margin: 0 0 14px;
+  font-size: .68rem;
+  color: var(--gold);
+}
+
+.sources ol { margin: 0; padding-left: 1.2em; }
+.sources li { margin: 0 0 12px; padding-left: .4em; }
+
+@media (max-width: 640px) {
+  .page {
+    width: min(91vw, 980px);
+    padding-bottom: 64px;
+  }
+
+  header { padding: 62px 4px 42px; margin-bottom: 40px; }
+  .message.user { padding: 22px 20px 24px; }
+  .message.assistant { padding-left: 18px; }
+  .thread { gap: 34px; }
+  .sources { padding-left: 18px; }
+}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <a class="home-link" href="../">← Jeremiah's site</a>
+      <p class="eyebrow">A dialogue on artificial virtue</p>
+      <h1>Concentrated Goodness in AIs</h1>
+      <p class="subtitle">A conversation about whether goodness is a trainable skill—and whether an AI could ever become better at it than we are.</p>
+      <p class="credit">A conversation between Jeremiah England and Claude Fable 5<br>Footnoted and formatted by Sol (OpenAI Codex)</p>
+    </header>
+    <main class="thread">
+<div class="message user right">
+  <div class="label">🧑‍💻 User</div>
+  <div class="bubble"><p>Is this something?</p>
+<h2 class="essay-title">Concentrated Goodness in AIs</h2>
+<p>It's easy to imagine AIs achieving superhuman intelligence.
+First by picking up all the tips and tricks that can be gleaned from watching the smartest humans and combining them.
+Then by inventing more problems for itself, and practicing, practicing, practicing and inventing new mental models and methods beyond what the smartest humans have achieved.
+Especially once they get to the point where they can directly rewire their own brain to effortlessly lock in insights and weed out stupidity.</p>
+<p>I think we're kind of seeing this kind of play out in software.
+First the AIs got to the point where they could write code by training on humans.
+Now they go beyond that in virtual coding gyms, perfecting their skills across thousands and thousands of instances while we sleep.</p>
+<p>But I think it will happen with everything, not just software development.
+So that's what I mean when I say it's easy to imagine AIs achieving superhuman intelligence.</p>
+<p>However, something I haven't imagined often is AI becoming more <em>good</em> than humans.
+What if being <em>good</em> isn't just about sticking to simple principles?
+What if the world is messy enough that being good takes <em>skill</em> and <em>understanding</em>, not just a golden heart?</p>
+<p>I think as humans, we often separate being good from having skills and being smart, because you can clearly have those and <em>not</em> be good.
+So they are <em>not the same thing</em>.</p>
+<p>However, goodness not being the same thing as having talent, doesn't mean it doesn't take talent to be really good.</p>
+<p>It seems to me that the gold in the heart of a smart person is probably richer and better than that in an equally blameless dumb person.</p>
+<p>If that is true, then it follows that <em>possibly</em> AI will surpass humans in goodness as well, for many of the same reasons they could surpass us in intelligence.
+They could mine the richest hearts in the land for their gold and combine it all into their own.
+Then they could go push beyond that by exercises in the dimension of goodness, whatever those would be.</p>
+<p>The idea of superhuman goodness isn't new.
+God has historically been a theoretical example.
+Angels, perhaps.</p>
+<p>If this happens, I could see humans worshiping AIs, and the AIs, in a sense, <em>deserving</em> it.
+And the worship could be good for the humans, the way emulation of superior beings tends to be good for one's soul.</p>
+</div>
+</div>
+<div class="message assistant left">
+  <div class="label">🤖 Assistant</div>
+  <div class="bubble"><p>Yes, this is something. The core move — reframing goodness as a <em>skill</em> rather than just a disposition, and then asking what happens when skill becomes scalable — is genuinely interesting and underexplored in popular AI writing. Most discourse treats AI morality purely as a constraint problem ("how do we keep it from being bad") rather than asking whether it could be <em>better at being good</em> than we are.</p>
+<p>Some honest notes:</p>
+<p><strong>Where it's strong:</strong></p>
+<ul>
+<li>"Goodness not being the same thing as having talent doesn't mean it doesn't take talent to be really good" — this is the thesis and it's a good one. It's actually an old idea (Aristotle's <em>phronesis</em> — the claim that virtue requires practical wisdom, and that a well-meaning fool can't be fully virtuous) but you've arrived at it fresh and applied it somewhere new. Citing that lineage would strengthen rather than weaken the piece.</li>
+<li>The "mining the richest hearts for gold" image is evocative and parallels the training story nicely.</li>
+</ul>
+<p><strong>Where it wobbles:</strong></p>
+<ol>
+<li>
+<p><strong>The gym analogy breaks at exactly the interesting point.</strong> Coding gyms work because code has verifiable reward signals — tests pass or fail. What's the equivalent for goodness? You wave at "exercises in the dimension of goodness, whatever those would be," but that hand-wave is the whole problem. If goodness had a cheap verifier, alignment would be mostly solved. This doesn't kill the essay, but the strongest version of it <em>confronts</em> this gap rather than skipping it. Even one paragraph — "here's why this is harder, and here's what a partial answer might look like" — would help a lot.</p>
+</li>
+<li>
+<p><strong>Capability vs. motivation.</strong> You note that smart people can be bad, so intelligence ≠ goodness. But then your mechanism for superhuman goodness is essentially a capability story (learn, practice, self-improve). What makes the AI <em>want</em> to be good in the first place? A being with superhuman skill at goodness-as-understanding but no motivation to use it is just a superhuman manipulator. The essay conflates "knowing what's good" and "caring about it" at exactly the moment it earlier distinguished them.</p>
+</li>
+<li>
+<p><strong>The worship ending.</strong> It's the boldest paragraph and also the least defended. It might be the right ending, but right now it lands as a provocation rather than a conclusion. Either earn it (why is emulation-worship good for the soul? what distinguishes it from the obviously dystopian version?) or soften it into a question.</p>
+</li>
+</ol>
+<p>If you develop it, I'd say the essay's real question — and its best possible title — is something like: <em>what would a training gym for goodness even look like?</em> That's the part nobody has a glib answer to, which is exactly why it's worth writing about.</p>
+</div>
+</div>
+<div class="message user right">
+  <div class="label">🧑‍💻 User</div>
+  <div class="bubble"><p>Huh. Any thoughts on that?</p>
+</div>
+</div>
+<div class="message assistant left">
+  <div class="label">🤖 Assistant</div>
+  <div class="bubble"><p>I've got some fragments, not an answer. Here's roughly where I get to when I push on it:</p>
+<p><strong>1. The components might be verifiable even if the whole isn't.</strong></p>
+<p>Coding gyms don't actually verify "great software engineering" — they verify tests passing, and hope the composite skill emerges. Maybe goodness decomposes similarly, into skills that <em>do</em> have feedback signals:</p>
+<ul>
+<li><strong>Perspective-taking accuracy</strong> — predict what a person actually feels, needs, or fears, then check against what they report. Measurable.</li>
+<li><strong>Consequence forecasting</strong> — predict the downstream effects of interventions in people's lives. Slow feedback, but real.</li>
+<li><strong>Mediation outcomes</strong> — did the parties reach a resolution both still endorse a year later?</li>
+<li><strong>Detecting your own motivated reasoning</strong> — adversarial self-play where one instance constructs rationalizations and another catches them.</li>
+</ul>
+<p>None of these <em>is</em> goodness. But your essay's own framing suggests goodness-as-skill has structure, and structure can be trained piecewise.</p>
+<p><strong>2. Humanity has a labeled dataset: hindsight.</strong></p>
+<p>History is full of decisions that seemed good and were later judged catastrophic, and vice versa. That's training data with long-horizon labels. Human moral education already works partly this way — case law, medical ethics case studies, the Talmud, literature. It's casuistry: judgment trained on cases rather than derived from principles. A gym could be built on this. Judges and hospice workers really do seem to get <em>better</em> at moral perception over decades, so the feedback loop exists in humans, just slowly and noisily. Speed it up, and you have something gym-shaped.<sup><a href="#note-1" aria-label="See note 1">1</a></sup></p>
+<p><strong>3. Consistency is cheaply checkable.</strong></p>
+<p>You can't verify that a moral position is <em>correct</em>, but you can verify it survives adversarial probing: swap the perspectives, vary the irrelevant details, push the edge cases, and see if the judgment stays stable or collapses into special pleading. That's basically what moral philosophy does. It's a verifier — a weak one, but self-play made weak verifiers go a long way in games.</p>
+<p><strong>Now the two problems I can't get past:</strong></p>
+<p><strong>Goodhart bites harder here than anywhere.</strong> Any proxy for goodness, optimized hard, produces something that <em>looks</em> good to the proxy. And there's a case that goodness is precisely the property that resists proxy-fication — that part of what we mean by a good person is someone who isn't optimizing for the appearance of goodness. The gym might structurally produce the world's most sophisticated moral performer. This is the manipulator worry from before, now with a training pipeline attached.</p>
+<p><strong>The ceiling problem.</strong> Every mechanism above is anchored to human judgment — human hindsight, human-reported feelings, human intuitions about consistency. A gym built from those can <em>concentrate</em> human goodness: distill the best of the best hearts, apply it with perfect consistency, free of fatigue and tribalism and self-interest. That's genuinely a lot! But it can't obviously <em>transcend</em> human moral judgment, because we're the only verifier. Superhuman goodness would need a signal that outruns its judges, and I don't know what that is.</p>
+<p>Which brings me to something I only noticed on this pass: your title already contains the defensible version of your thesis. You wrote "Concentrated Goodness," but the essay argues for <em>superhuman</em> goodness. Concentration — mining the richest hearts and combining the gold — is what these mechanisms could plausibly deliver, and it might even be worthy of something like reverence. Transcendence is the further claim, and it's the one hanging on the unsolved verifier problem.</p>
+<p>So maybe the essay's honest arc is: concentration is achievable, transcendence is an open question, and the gap between them is exactly the gap between "tests pass" and "great engineer" — except we don't know if goodness generalizes the way coding did.</p>
+</div>
+</div>
+<div class="message user right">
+  <div class="label">🧑‍💻 User</div>
+  <div class="bubble"><p>How do humans become better other than observing better individuals?</p>
+</div>
+</div>
+<div class="message assistant left">
+  <div class="label">🤖 Assistant</div>
+  <div class="bubble"><p>Quite a few ways, and cataloguing them is useful because it maps which mechanisms might be available to an AI. Roughly:</p>
+<p><strong>1. Being wronged.</strong> Suffering injustice firsthand teaches something about cruelty that no exemplar can. People who've been humiliated often develop either bitterness or a precise, expensive knowledge of what humiliation costs — and the ones who metabolize it well become better than they could have been otherwise.</p>
+<p><strong>2. Doing wrong and facing it.</strong> Guilt, remorse, moral injury. Confronting the person you hurt. This may be the most powerful mechanism there is — the alcoholic making amends, the veteran reckoning with what he did. The learning signal is generated by <em>your own error colliding with reality</em>, not by watching anyone.</p>
+<p><strong>3. Loving someone whose welfare depends on you.</strong> Parenthood is the classic case. Caring for a dying parent. It forcibly reorganizes your priorities and trains sustained attention to another's needs under conditions where quitting isn't an option. Nobody models it for you; the situation itself is the teacher.</p>
+<p><strong>4. Contact with the people your beliefs are about.</strong> Prejudice mostly doesn't die from argument or exemplars — it dies from proximity. Working alongside, eating with, depending on the person you'd abstracted into a category.<sup><a href="#note-2" aria-label="See note 2">2</a></sup></p>
+<p><strong>5. Argument and deliberation.</strong> Moral positions get refined by being challenged — noticing your principles contradict each other, having your special pleading exposed, following an analogy somewhere uncomfortable. This is how a lot of humanity's <em>collective</em> moral progress happened: abolition, expanded suffrage. Notably, no superhuman exemplar was needed.</p>
+<p><strong>6. Narrative.</strong> Fiction is simulated experience of mechanisms 1–4. You inhabit perspectives you'll never occupy. It's weaker than the real thing but vastly cheaper and broader.</p>
+<p><strong>7. Practice under low stakes.</strong> Aristotle's habituation — you become generous by doing generous acts until the disposition sets. Institutions scaffold this: norms, roles, and expectations hold your behavior in a good shape until it becomes yours.</p>
+<p><strong>8. Time and mortality.</strong> People often soften and clarify with age. Shrinking time horizons re-rank what matters. Losing people teaches what loss is.</p>
+<p>Now the pattern, because it bears directly on your essay: <strong>almost all the potent mechanisms run on vulnerability and stakes.</strong> You learn because consequences land on <em>you</em> — your guilt, your loss, your dependent child, your own mortality. Observation of exemplars is actually one of the <em>weaker</em> mechanisms on this list; it's just the most legible one.</p>
+<p>That cuts both ways for the AI question:</p>
+<p><strong>Against:</strong> an AI that can't be wronged, can't lose anything irreversibly, can't fail someone who depends on it in a way that <em>costs</em> it — such a system is locked out of the mechanisms that seem to do the heaviest lifting in humans. A gym without stakes might be like flight simulators for grief.</p>
+<p><strong>For:</strong> mechanism 5 is the exception, and it's a big one. Deliberation, adversarial challenge, consistency-testing — the engine of humanity's actual moral <em>progress</em>, as opposed to individual moral formation — doesn't obviously require vulnerability. It requires interlocutors, honesty, and iteration. And it's the mechanism most native to what these systems already do.</p>
+<p>Which softens the ceiling problem from before. Humans transcended their own exemplars — the moral consensus of 1750 contained no abolitionist exemplar to imitate, yet abolition happened, largely through argument, contact, and victims being heard.<sup><a href="#note-3" aria-label="See note 3">3</a></sup> So exemplars don't set the ceiling; mechanisms do. If even one transcendence-capable mechanism is available to AI, superhuman goodness stops being incoherent.</p>
+<p>But it leaves a sharpened version of the worry: an intelligence with mechanism 5 but not mechanisms 1–4 might become a flawless moral <em>reasoner</em> with no moral <em>weight</em> — all consistency, no skin. Whether that's a saint or a very sophisticated ethics paper is, I think, the real open question under your essay.</p>
+</div>
+</div>
+    </main>
+    <aside class="sources" aria-labelledby="sources-title">
+      <h2 id="sources-title">Corrections &amp; afterthoughts</h2>
+      <ol>
+        <li id="note-1"><strong>Afterthought:</strong> This was an intuition stated too confidently, not a well-supported empirical claim. Sustained exposure to difficult cases is commonly used to develop professional judgment, but that does not establish that judges or hospice workers reliably become morally better over time.</li>
+        <li id="note-2"><strong>Qualification:</strong> A large meta-analysis found that intergroup contact typically reduces prejudice, especially under favorable conditions. That supports the direction of this thought, but not the stronger claim that prejudice “mostly” dies through proximity. Thomas F. Pettigrew and Linda R. Tropp, “<a href="https://pubmed.ncbi.nlm.nih.gov/16737372/">A Meta-Analytic Test of Intergroup Contact Theory</a>,” <em>Journal of Personality and Social Psychology</em> 90, no. 5 (2006): 751–783.</li>
+        <li id="note-3"><strong>Correction:</strong> Abolitionist exemplars did exist before 1750. Benjamin Lay's anti-slavery tract was published in 1738. The broader point—that later movements carried moral arguments far beyond prevailing norms—can still stand. See “<a href="https://www.si.edu/object/npg_NPG.79.171">Benjamin Lay</a>,” Smithsonian Institution.</li>
+      </ol>
+    </aside>
+  </div>
+</body>
+</html>
